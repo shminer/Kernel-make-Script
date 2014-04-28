@@ -1,0 +1,98 @@
+#!/bin/bash
+
+# ${HOME}/
+# ${HOME}/lg
+
+ker=${HOME}/lg/Dorimanx-LG-G2-D802-Kernel
+boot=${HOME}/lg/boot
+out=${HOME}/lg/zipoutput
+kw=${HOME}/lg/kernel-working
+rd=${HOME}/lg/LG-G2-D802-Ramdisk
+echo "type you deconfig"
+read cfg
+config=$ker/arch/arm/configs/dorimanx_d80$cfg_defconfig
+da=`date +%y_%m_%d`
+thr=8
+ccache -c
+
+
+export CROSS_COMPILE=${HOME}/lg/linaro-a15-47/bin/arm-cortex_a15-linux-gnueabihf-
+export arch=arm
+
+if [ -e $ker/arch/arm/boot/zImage ]
+then
+
+rm $boot/img/dt.img
+rm $boot/img/zImage
+rm $kw/boot.img
+
+echo "====clear finish===="
+
+else
+
+echo "====folder is clear===="
+fi
+
+echo "====make kernel===="
+cd $ker
+echo "$config"
+
+for i in `find . -type f \( -iname \*.rej \
+                                -o -iname \*.orig \
+                                -o -iname \*.bkp \
+                                -o -iname \*.ko \
+                                -o -iname \*.c.BACKUP.[0-9]*.c \
+                                -o -iname \*.c.BASE.[0-9]*.c \
+                                -o -iname \*.c.LOCAL.[0-9]*.c \
+                                -o -iname \*.c.REMOTE.[0-9]*.c \
+                                -o -iname \*.org \)`; do
+        rm -vf $i;
+done;
+
+make clean && make mrproper
+
+cp $config .config;
+# time make -j$thr $config
+time make -j$thr
+cd ..
+
+echo "==== make ramdisk ===="
+read
+rm $boot/img/ramdisk80$cfg.gz
+$boot/tool/mkbootfs $rd | gzip > ramdisk802.gz 2>/dev/null
+mv ramdisk80$cfg.gz $boot/img
+
+if [ -e $ker/arch/arm/boot/zImage ]
+then
+echo "====kernel is ready===="
+cp $ker/arch/arm/boot/zImage $boot/img/zImage
+$ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
+$boot/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk80$cfg.gz --cmdline "console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd" --base 0x00000000 --offset 0x05000000 --tags-addr 0x04800000 --pagesize 2048 --dt $boot/img/dt.img -o $boot/boot.img
+echo "====list dt.img & boot.img===="
+ls $boot/img/dt.img 
+ls $boot/boot.img
+
+if [ -e $boot/boot.img ]
+then
+echo "====type a code for user filename===="
+#####user zip file name#####
+read code
+fm=LG-D801-OCkernel$code-$da.zip
+############################
+mv $boot/boot.img $kw/boot.img
+rm $kw/system/lib/modules/*.*
+find $ker/ -name *.ko -exec cp -f {} $kw/system/lib/modules/ \;
+cd $kw
+zip -r temp.zip *
+cd ..
+mv $kw/temp.zip $out/$fm
+ls $out/$fm
+echo "====make zip successed===="
+else
+echo "====boot.img not found===="
+echo "====  make zip failed ===="
+fi
+else
+echo "====make faile===="
+fi
+echo "today=$da"
