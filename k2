@@ -57,6 +57,11 @@ time make -j$thr
 cd ..
 
 echo "==== make ramdisk ===="
+echo "==== checkout ramdisk branch ===="
+cd $rd
+git checkout d80${cfg}
+git status
+cd ..
 rm $boot/img/ramdisk80${cfg}.gz
 $boot/tool/mkbootfs $rd | gzip > ramdisk80${cfg}.gz 2>/dev/null
 mv ramdisk80${cfg}.gz $boot/img
