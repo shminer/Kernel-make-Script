@@ -57,7 +57,6 @@ time make -j$thr
 cd ..
 
 echo "==== make ramdisk ===="
-read
 rm $boot/img/ramdisk80$cfg.gz
 $boot/tool/mkbootfs $rd | gzip > ramdisk802.gz 2>/dev/null
 mv ramdisk80$cfg.gz $boot/img
