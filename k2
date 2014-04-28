@@ -79,23 +79,13 @@ then
 #####automatic zip file name#####
 for (( code=1;  ; code++ ))
 do
-echo d0====pr code
-echo ${code}
 fm=LG-${cfg}-kernel-t${code}-$da.zip
-echo d1====list output file
-echo $fm
 if [ -e ${out}/${fm} ]
 then
-echo ===file ${fm} ex
 continue
 else
-echo ===file not ex
 break
 fi
-done
-echo d2======final
-echo ${code}
-echo ${fm}
 done
 ############################
 mv $boot/boot.img $kw/boot.img
