@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # ${HOME}/
 # ${HOME}/lg
 
@@ -8,16 +7,17 @@ boot=${HOME}/lg/boot
 out=${HOME}/lg/zipoutput
 kw=${HOME}/lg/kernel-working
 rd=${HOME}/lg/LG-G2-D802-Ramdisk
-echo "type you defconfig"
-read cfg
-config=$ker/arch/arm/configs/dorimanx_d80${cfg}_defconfig
+num="1  2"
 da=`date +%y_%m_%d`
 thr=8
 ccache -c
-
-
 export CROSS_COMPILE=${HOME}/lg/linaro-a15-47/bin/arm-cortex_a15-linux-gnueabihf-
 export arch=arm
+
+
+for cfg in ${num} ; do
+
+config=$ker/arch/arm/configs/dorimanx_d80${cfg}_defconfig
 
 if [ -e $ker/arch/arm/boot/zImage ]
 then
@@ -27,9 +27,7 @@ rm $boot/img/zImage
 rm $kw/boot.img
 
 echo "====clear finish===="
-
 else
-
 echo "====folder is clear===="
 fi
 
@@ -100,3 +98,5 @@ else
 echo "====make faile===="
 fi
 echo "today=$da"
+
+done
