@@ -58,7 +58,7 @@ cd ..
 
 echo "==== make ramdisk ===="
 rm $boot/img/ramdisk80$cfg.gz
-$boot/tool/mkbootfs $rd | gzip > ramdisk802.gz 2>/dev/null
+$boot/tool/mkbootfs $rd | gzip > ramdisk80$cfg.gz 2>/dev/null
 mv ramdisk80$cfg.gz $boot/img
 
 if [ -e $ker/arch/arm/boot/zImage ]
@@ -76,7 +76,7 @@ then
 echo "====type a code for user filename===="
 #####user zip file name#####
 read code
-fm=LG-D801-OCkernel$code-$da.zip
+fm=LG-D80$cfg-OCkernel$code-$da.zip
 ############################
 mv $boot/boot.img $kw/boot.img
 rm $kw/system/lib/modules/*.*
