@@ -58,7 +58,6 @@ echo "==== make ramdisk ===="
 echo "==== checkout ramdisk branch ===="
 cd $rd
 git checkout ${cfg}
-git status
 cd ..
 rm $boot/img/ramdisk${cfg}.gz
 $boot/tool/mkbootfs $rd | gzip > ramdisk${cfg}.gz 2>/dev/null
