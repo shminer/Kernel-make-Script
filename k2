@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # ${HOME}/
 # ${HOME}/lg
 
@@ -18,18 +19,8 @@ export CROSS_COMPILE=${HOME}/lg/linaro-a15-47/bin/arm-cortex_a15-linux-gnueabihf
 export arch=arm
 #############################################################################
 
-
-if [ -e $boot/temp/faile]
-then
-rm $boot/temp/faile
-else
 for cfg in ${num} ; do
 
-# check code
-if [ -e $boot/temp/faile]
-then
-break
-else
 config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
 
 if [ -e $ker/arch/arm/boot/zImage ]
@@ -64,7 +55,7 @@ make clean && make mrproper
 
 cp $config .config;
 # time make -j$thr $config
-time make -j$thr
+time make -j${thr}
 cd ..
 
 if [ -e $ker/arch/arm/boot/zImage ]
@@ -110,9 +101,7 @@ echo "====make zip successed===="
 
 else
 echo "====make faile===="
-touch $boot/temp/faile
+break
 fi
 echo "today=$da"
-fi
 done
-fi
