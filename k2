@@ -2,6 +2,9 @@
 # ${HOME}/
 # ${HOME}/lg
 
+
+
+#############################################################################
 ker=${HOME}/lg/Dorimanx-LG-G2-D802-Kernel
 boot=${HOME}/lg/boot
 out=${HOME}/lg/zipoutput
@@ -13,10 +16,20 @@ thr=8
 ccache -c
 export CROSS_COMPILE=${HOME}/lg/linaro-a15-47/bin/arm-cortex_a15-linux-gnueabihf-
 export arch=arm
+#############################################################################
 
 
+if [ -e $boot/temp/faile]
+then
+rm $boot/temp/faile
+else
 for cfg in ${num} ; do
 
+# check code
+if [ -e $boot/temp/faile]
+then
+break
+else
 config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
 
 if [ -e $ker/arch/arm/boot/zImage ]
@@ -54,6 +67,9 @@ cp $config .config;
 time make -j$thr
 cd ..
 
+if [ -e $ker/arch/arm/boot/zImage ]
+then
+echo "====kernel is ready===="
 echo "==== make ramdisk ===="
 echo "==== checkout ramdisk branch ===="
 cd $rd
@@ -63,9 +79,6 @@ rm $boot/img/ramdisk${cfg}.gz
 $boot/tool/mkbootfs $rd | gzip > ramdisk${cfg}.gz 2>/dev/null
 mv ramdisk${cfg}.gz $boot/img
 
-if [ -e $ker/arch/arm/boot/zImage ]
-then
-echo "====kernel is ready===="
 cp $ker/arch/arm/boot/zImage $boot/img/zImage
 $ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
 $boot/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk${cfg}.gz --cmdline "console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd" --base 0x00000000 --offset 0x05000000 --tags-addr 0x04800000 --pagesize 2048 --dt $boot/img/dt.img -o $boot/boot.img
@@ -73,8 +86,6 @@ echo "====list dt.img & boot.img===="
 ls $boot/img/dt.img 
 ls $boot/boot.img
 
-if [ -e $boot/boot.img ]
-then
 #####automatic zip file name#####
 for (( code=1;  ; code++ ))
 do
@@ -96,13 +107,12 @@ cd ..
 mv $kw/temp.zip $out/$fm
 ls $out/$fm
 echo "====make zip successed===="
-else
-echo "====boot.img not found===="
-echo "====  make zip failed ===="
-fi
+
 else
 echo "====make faile===="
+touch $boot/temp/faile
 fi
 echo "today=$da"
-
+fi
 done
+fi
