@@ -11,11 +11,12 @@ boot=${HOME}/lg/boot
 out=${HOME}/lg/zipoutput
 kw=${HOME}/lg/kernel-working
 rd=${HOME}/lg/LG-G2-D802-Ramdisk
+rdt=${boot}/temp/rd-temp
 num="d801  d802"
 da=`date +%y_%m_%d`
 thr=8
 ccache -c
-export CROSS_COMPILE=${HOME}/lg/linaro-a15-47/bin/arm-cortex_a15-linux-gnueabihf-
+export CROSS_COMPILE=${HOME}/lg/android-toolchain/bin/arm-eabi-
 export arch=arm
 #############################################################################
 
@@ -62,17 +63,16 @@ if [ -e $ker/arch/arm/boot/zImage ]
 then
 echo "====kernel is ready===="
 echo "==== make ramdisk ===="
-echo "==== checkout ramdisk branch ===="
-cd $rd
-git checkout ${cfg}
-cd ..
-rm $boot/img/ramdisk${cfg}.gz
-$boot/tool/mkbootfs $rd | gzip > ramdisk${cfg}.gz 2>/dev/null
-mv ramdisk${cfg}.gz $boot/img
+cp -a ${rd}/ROOT-RAMDISK/* ${rdt}
+cp -a ${rd}/${cfg}-RAMDISK/* ${rdt}
+rm ${boot}/img/ramdisk.gz
+${boot}/tool/mkbootfs ${rdt} | gzip > ramdisk.gz 2>/dev/null
+mv ramdisk.gz $boot/img
+rm -r ${rdt}/*
 
 cp $ker/arch/arm/boot/zImage $boot/img/zImage
 $ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
-$boot/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk${cfg}.gz --cmdline "console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd" --base 0x00000000 --offset 0x05000000 --tags-addr 0x04800000 --pagesize 2048 --dt $boot/img/dt.img -o $boot/boot.img
+$boot/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.gz --cmdline "console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd" --base 0x00000000 --offset 0x05000000 --tags-addr 0x04800000 --pagesize 2048 --dt $boot/img/dt.img -o $boot/boot.img
 echo "====list dt.img & boot.img===="
 ls $boot/img/dt.img 
 ls $boot/boot.img
