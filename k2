@@ -64,12 +64,17 @@ base=0x00000000
 offset=0x05000000
 ta=0x04800000
 pg=2048 
-lgd="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd"
-jdi="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_jdi_cmd"
-clt="lgd jdi"
+LGD="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd"
+JDI="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_jdi_cmd"
+clt="LGD JDI"
 #############################################################################
 for cl in ${clt} ; do
-cl2=${cl}
+if [  "${cl}" = "LGD" ]
+then
+cl2=${LGD}
+else
+cl2=${JDI}
+fi
 if [ -e $ker/arch/arm/boot/zImage ]
 then
 echo "====kernel is ready===="
@@ -83,6 +88,7 @@ rm -r ${rdt}/*
 
 cp $ker/arch/arm/boot/zImage $boot/img/zImage
 $ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
+echo ${cl2}
 $boot/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.gz --cmdline "${cl2}" --base ${base} --offset ${offset} --tags-addr ${ta} --pagesize ${pg} --dt $boot/img/dt.img -o $boot/boot.img
 echo "====list dt.img & boot.img===="
 ls $boot/img/dt.img 
