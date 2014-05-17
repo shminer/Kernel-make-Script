@@ -12,7 +12,7 @@ out=${HOME}/lg/zipoutput
 kw=${HOME}/lg/kernel-working
 rd=${HOME}/lg/LG-G2-D802-Ramdisk
 rdt=${boot}/temp/rd-temp
-num="d801 d802 vs980"
+num="d801 d802 vs980 f320"
 da=`date +%y_%m_%d`
 thr=8
 ccache -c
