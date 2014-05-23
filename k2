@@ -12,11 +12,12 @@ out=${HOME}/lg/zipoutput
 kw=${HOME}/lg/kernel-working
 rd=${HOME}/lg/LG-G2-D802-Ramdisk
 rdt=${boot}/temp/rd-temp
-num="d801 d802 vs980 f320"
+num="d801 d802 f320"
+# num="d801"
 da=`date +%y_%m_%d`
 thr=8
 ccache -c
-export CROSS_COMPILE=${HOME}/lg/android-toolchain/bin/arm-eabi-
+export CROSS_COMPILE=${HOME}/lg/android-toolchain2/bin/arm-cortex_a15-linux-gnueabihf-
 export arch=arm
 #############################################################################
 
@@ -98,7 +99,7 @@ ls $boot/boot.img
 for (( code=1;  ; code++ ))
 do
 fm=LG-${cfg}-kernel-${cl}-t${code}-$da.zip
-if [ -e ${out}/${fm} ]
+if [ -e ${out}/${cl}/${fm} ]
 then
 continue
 else
@@ -112,8 +113,8 @@ find $ker/ -name *.ko -exec cp -f {} $kw/system/lib/modules/ \;
 cd $kw
 zip -r temp.zip *
 cd ..
-mv $kw/temp.zip $out/$fm
-ls $out/$fm
+mv $kw/temp.zip ${out}/${cl}/${fm}
+ls ${out}/${cl}/${fm}
 echo "====make ${cfg}-${cl} successed===="
 else
 echo "====make faile===="
