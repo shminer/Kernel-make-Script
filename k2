@@ -6,14 +6,14 @@
 
 
 #############################################################################
-ker=${HOME}/lg/Dorimanx-LG-G2-D802-Kernel
+ker=${HOME}/lg/LG-G2-Kernel
 boot=${HOME}/lg/boot
 out=${HOME}/lg/zipoutput
 kw=${HOME}/lg/kernel-working
 rd=${HOME}/lg/LG-G2-D802-Ramdisk
 rdt=${boot}/temp/rd-temp
-num="d801 d802 f320"
-# num="d801"
+echo "d801 d802 f320"
+read num
 da=`date +%y_%m_%d`
 thr=8
 ccache -c
