@@ -12,15 +12,89 @@ out=${HOME}/lg/zipoutput
 kw=${HOME}/lg/kernel-working
 rd=${HOME}/lg/LG-G2-D802-Ramdisk
 rdt=${boot}/temp/rd-temp
-echo "d801 d802 f320"
-read num
 da=`date +%y_%m_%d`
 thr=8
 ccache -c
-export CROSS_COMPILE=${HOME}/lg/android-toolchain2/bin/arm-cortex_a15-linux-gnueabihf-
+export CROSS_COMPILE=${HOME}/lg/LG-G2-Kernel/android-toolchain/bin/arm-eabi-
 export arch=arm
 #############################################################################
+echo "d801 d802 f320"
+read num
+echo "make kernel or repack ramdisk only."
+echo "type "y" repack ramdisk,anykey make kernel."
+read ju
+if [ "${ju}" = "y" ]
+then
+echo "repack ramdisk only"
+for cfg in ${num} ; do
+#############################################################################
+base=0x00000000
+offset=0x05000000
+ta=0x04800000
+pg=2048 
+LGD="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd"
+JDI="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_jdi_cmd"
+clt="LGD JDI"
+#############################################################################
+for cl in ${clt} ; do
+if [  "${cl}" = "LGD" ]
+then
+cl2=${LGD}
+else
+cl2=${JDI}
+fi
+if [ -e $ker/arch/arm/boot/zImage ]
+then
+echo "====kernel is ready===="
+echo "==== make ramdisk ===="
+cp -a ${rd}/ROOT-RAMDISK/* ${rdt}
+cp -a ${rd}/${cfg}-RAMDISK/* ${rdt}
+rm ${boot}/img/ramdisk.gz
+${boot}/tool/mkbootfs ${rdt} | gzip > ramdisk.gz 2>/dev/null
+mv ramdisk.gz $boot/img
+rm -r ${rdt}/*
 
+cp $ker/arch/arm/boot/zImage $boot/img/zImage
+$ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
+echo ${cl2}
+$boot/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.gz --cmdline "${cl2}" --base ${base} --offset ${offset} --tags-addr ${ta} --pagesize ${pg} --dt $boot/img/dt.img -o $boot/boot.img
+echo "====list dt.img & boot.img===="
+ls $boot/img/dt.img 
+ls $boot/boot.img
+
+#####automatic zip file name#####
+for (( code=1;  ; code++ ))
+do
+fm=LG-${cfg}-kernel-${cl}-t${code}-$da-mr.zip
+if [ -e ${out}/${cl}/${fm} ]
+then
+continue
+else
+break
+fi
+done
+############################
+mv $boot/boot.img $kw/boot.img
+rm $kw/system/lib/modules/*.*
+find $ker/ -name *.ko -exec cp -f {} $kw/system/lib/modules/ \;
+cd $kw
+zip -r temp.zip *
+cd ..
+mv $kw/temp.zip ${out}/${cl}/${fm}
+ls ${out}/${cl}/${fm}
+echo "====make ${cfg}-${cl} successed===="
+else
+echo "====make faile===="
+break
+fi
+done
+echo "today=$da"
+
+done
+
+else
+
+echo "make kernel"
 for cfg in ${num} ; do
 
 config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
@@ -123,3 +197,4 @@ fi
 done
 echo "today=$da"
 done
+fi
