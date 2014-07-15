@@ -14,7 +14,6 @@ rd=${HOME}/lg/LG-G2-D802-Ramdisk
 rdt=${boot}/temp/rd-temp
 da=`date +%y_%m_%d`
 thr=8
-ccache -c
 export CROSS_COMPILE=${HOME}/lg/LG-G2-Kernel/android-toolchain/bin/arm-eabi-
 export arch=arm
 #############################################################################
@@ -95,6 +94,7 @@ done
 else
 
 echo "make kernel"
+ccache -c
 for cfg in ${num} ; do
 
 config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
@@ -172,7 +172,7 @@ ls $boot/boot.img
 #####automatic zip file name#####
 for (( code=1;  ; code++ ))
 do
-fm=LG-${cfg}-kernel-${cl}-t${code}-$da.zip
+fm=LG-${cfg}-kernel-${cl}-t${code}-$da-nor.zip
 if [ -e ${out}/${cl}/${fm} ]
 then
 continue
