@@ -46,17 +46,17 @@ pack_ramdisk()
 				echo "pack ramdisk:list dt.img & boot.img"
 				ls $boot/img/dt.img
 				ls $boot/boot.img
-				
+
 				# automatic zip file name
 				for (( code=1;  ; code++ ));do
-					fm=LG-${cfg}-kernel-t${code}-$da-mr.zip
+					fm=LG-${cfg}-kernel-t${code}-$da-${relase}.zip
 						if [ -e ${out}/${fm} ];then
 						continue
 						else
 						break
 						fi
 				done
-				
+
 				mv $boot/boot.img $kw/boot.img
 				r2=`ls $kw/system/lib/modules/ | wc -l`
 				if [ "${r2}"  != "0" ] ;then
@@ -85,22 +85,22 @@ make_kernel()
 		for cfg in ${num} ; do
 			config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
 				if [ -e $ker/arch/arm/boot/zImage  ] || [ -e $boot/img/dt.img ] ||  [ -e $boot/img/zImage ] || [ -e $boot/img/zImage ];then
-				
+
 					if [ -e $boot/img/dt.img ];then
 						echo "make kernel:cleaning dt"
 						rm $boot/img/dt.img
 					fi
-					
+
 					if [ -e $boot/img/zImage ];then
 					echo "make kernel:cleaning zImage"
 					rm $boot/img/zImage
 					fi
-					
+
 					if [ -e $boot/img/zImage ];then
 						echo "make kernel:cleaning boot"
 						rm $kw/boot.img
-					fi	
-					
+					fi
+
 					echo "make kernel:clear finish"
 					else
 					echo "make kernel:folder is clear"
@@ -136,8 +136,10 @@ echo "Maintask:type "y" repack ramdisk,anykey make kernel."
 read ju
 if [ "${ju}" = "y" ];then
 	echo "Maintask:repack ramdisk only"
+		relase=mr
 		pack_ramdisk
 		else
+		relase=nor
 		echo "Maintask:make kernel"
 		make_kernel
 		echo "Maintask:pack ramdisk"
