@@ -59,7 +59,6 @@ pack_ramdisk()
 				
 				mv $boot/boot.img $kw/boot.img
 				r2=`ls $kw/system/lib/modules/ | wc -l`
-				echo $r2
 				if [ "${r2}"  != "0" ] ;then
 					echo "pack ramdisk:clean kernel work folder"
 					rm $kw/system/lib/modules/*
