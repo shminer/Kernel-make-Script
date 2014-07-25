@@ -3,8 +3,6 @@
 # ${HOME}/
 # ${HOME}/lg
 
-
-
 #############################################################################
 ker=${HOME}/lg/LG-G2-Kernel
 boot=${HOME}/lg/boot
@@ -13,109 +11,105 @@ kw=${HOME}/lg/kernel-working
 rd=${HOME}/lg/LG-G2-D802-Ramdisk
 rdt=${boot}/temp/rd-temp
 da=`date +%y_%m_%d`
-thr=8
+thr=`grep processor /proc/cpuinfo -c`
 export CROSS_COMPILE=${HOME}/lg/LG-G2-Kernel/android-toolchain/bin/arm-eabi-
 export arch=arm
-#############################################################################
-echo "d801 d802 f320"
-read num
-echo "make kernel or repack ramdisk only."
-echo "type "y" repack ramdisk,anykey make kernel."
-read ju
-if [ "${ju}" = "y" ]
-then
-echo "repack ramdisk only"
-for cfg in ${num} ; do
 #############################################################################
 base=0x00000000
 offset=0x05000000
 ta=0x04800000
-pg=2048 
-LGD="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd"
-JDI="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_jdi_cmd"
-clt="LGD JDI"
+pg=2048
+cmdline="consolettyHSL0,115200,n8 androidboot.hardwareg2 user_debug31 msm_rtb.filter0x0 mdss_mdp.panel1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd"
 #############################################################################
-for cl in ${clt} ; do
-if [  "${cl}" = "LGD" ]
-then
-cl2=${LGD}
-else
-cl2=${JDI}
-fi
-if [ -e $ker/arch/arm/boot/zImage ]
-then
-echo "====kernel is ready===="
-echo "==== make ramdisk ===="
-cp -a ${rd}/ROOT-RAMDISK/* ${rdt}
-cp -a ${rd}/${cfg}-RAMDISK/* ${rdt}
-rm ${boot}/img/ramdisk.gz
-${boot}/tool/mkbootfs ${rdt} | gzip > ramdisk.gz 2>/dev/null
-mv ramdisk.gz $boot/img
-rm -r ${rdt}/*
 
-cp $ker/arch/arm/boot/zImage $boot/img/zImage
-$ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
-echo ${cl2}
-$boot/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.gz --cmdline "${cl2}" --base ${base} --offset ${offset} --tags-addr ${ta} --pagesize ${pg} --dt $boot/img/dt.img -o $boot/boot.img
-echo "====list dt.img & boot.img===="
-ls $boot/img/dt.img 
-ls $boot/boot.img
+# function pack ramdisk
+pack_ramdisk()
+{
+	for cfg in ${num} ; do
+			if [ -e $ker/arch/arm/boot/zImage ];then
+				echo "pack ramdisk:kernel is ready"
+				echo "pack ramdisk:make ramdisk"
+				cp -a ${rd}/ROOT-RAMDISK/* ${rdt}
+				cp -a ${rd}/${cfg}-RAMDISK/* ${rdt}
+				if [ -e  ${boot}/img/ramdisk.gz ];then
+					rm ${boot}/img/ramdisk.gz
+				fi
+				${boot}/tool/mkbootfs ${rdt} | gzip > ramdisk.gz 2>/dev/null
+				mv ramdisk.gz $boot/img
+				if [ "$(ls ${rdt} | wc -l )"  != "0" ] ;then
+					rm -r ${rdt}/*
+					echo "pack ramdisk:clean ramdisk temp folder"
+				fi
+				cp $ker/arch/arm/boot/zImage $boot/img/zImage
+				$ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
+				$boot/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.gz --cmdline "${cmdline}" --base ${base} --offset ${offset} --tags-addr ${ta} --pagesize ${pg} --dt $boot/img/dt.img -o $boot/boot.img
+				echo "pack ramdisk:list dt.img & boot.img"
+				ls $boot/img/dt.img
+				ls $boot/boot.img
+				
+				# automatic zip file name
+				for (( code=1;  ; code++ ));do
+					fm=LG-${cfg}-kernel-t${code}-$da-mr.zip
+						if [ -e ${out}/${fm} ];then
+						continue
+						else
+						break
+						fi
+				done
+				
+				mv $boot/boot.img $kw/boot.img
+				r2=`ls $kw/system/lib/modules/ | wc -l`
+				echo $r2
+				if [ "${r2}"  != "0" ] ;then
+					echo "pack ramdisk:clean kernel work folder"
+					rm $kw/system/lib/modules/*
+				fi
+				find $ker/ -name *.ko -exec cp -f {} $kw/system/lib/modules/ \;
+				cd $kw
+				zip -r temp.zip *
+				cd ..
+				mv $kw/temp.zip ${out}/${fm}
+				ls ${out}/${fm}
+				echo "pack ramdisk:make boot.img ->${cfg} successed"
+				else
+				echo "pack ramdisk:make faile"
+			break
+			fi
+		done
+		echo "today$da"
+}
 
-#####automatic zip file name#####
-for (( code=1;  ; code++ ))
-do
-fm=LG-${cfg}-kernel-${cl}-t${code}-$da-mr.zip
-if [ -e ${out}/${cl}/${fm} ]
-then
-continue
-else
-break
-fi
-done
-############################
-mv $boot/boot.img $kw/boot.img
-rm $kw/system/lib/modules/*.*
-find $ker/ -name *.ko -exec cp -f {} $kw/system/lib/modules/ \;
-cd $kw
-zip -r temp.zip *
-cd ..
-mv $kw/temp.zip ${out}/${cl}/${fm}
-ls ${out}/${cl}/${fm}
-echo "====make ${cfg}-${cl} successed===="
-else
-echo "====make faile===="
-break
-fi
-done
-echo "today=$da"
-
-done
-
-else
-
-echo "make kernel"
-ccache -c
-for cfg in ${num} ; do
-
-config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
-
-if [ -e $ker/arch/arm/boot/zImage ]
-then
-
-rm $boot/img/dt.img
-rm $boot/img/zImage
-rm $kw/boot.img
-
-echo "====clear finish===="
-else
-echo "====folder is clear===="
-fi
-
-echo "====make kernel===="
-cd $ker
-echo "$config"
-
-for i in `find . -type f \( -iname \*.rej \
+# function make kernel
+make_kernel()
+{
+		ccache -c
+		for cfg in ${num} ; do
+			config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
+				if [ -e $ker/arch/arm/boot/zImage  ] || [ -e $boot/img/dt.img ] ||  [ -e $boot/img/zImage ] || [ -e $boot/img/zImage ];then
+				
+					if [ -e $boot/img/dt.img ];then
+						echo "make kernel:cleaning dt"
+						rm $boot/img/dt.img
+					fi
+					
+					if [ -e $boot/img/zImage ];then
+					echo "make kernel:cleaning zImage"
+					rm $boot/img/zImage
+					fi
+					
+					if [ -e $boot/img/zImage ];then
+						echo "make kernel:cleaning boot"
+						rm $kw/boot.img
+					fi	
+					
+					echo "make kernel:clear finish"
+					else
+					echo "make kernel:folder is clear"
+				fi
+				echo "make kernel:making kernel"
+				cd $ker
+				echo "$config"
+				for i in `find . -type f \( -iname \*.rej \
                                 -o -iname \*.orig \
                                 -o -iname \*.bkp \
                                 -o -iname \*.ko \
@@ -124,77 +118,29 @@ for i in `find . -type f \( -iname \*.rej \
                                 -o -iname \*.c.LOCAL.[0-9]*.c \
                                 -o -iname \*.c.REMOTE.[0-9]*.c \
                                 -o -iname \*.org \)`; do
-        rm -vf $i;
-done;
+								rm -vf $i;
+				done;
+				make  clean && make mrproper
+				cp $config .config;
+				# time make -j$thr $config
+				time make -j${thr}
+				cd ..
+				echo "make kernel:finish make kernel"
+		done
+}
 
-make clean && make mrproper
-
-cp $config .config;
-# time make -j$thr $config
-time make -j${thr}
-cd ..
-
-#############################################################################
-base=0x00000000
-offset=0x05000000
-ta=0x04800000
-pg=2048 
-LGD="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd"
-JDI="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_jdi_cmd"
-clt="LGD JDI"
-#############################################################################
-for cl in ${clt} ; do
-if [  "${cl}" = "LGD" ]
-then
-cl2=${LGD}
-else
-cl2=${JDI}
-fi
-if [ -e $ker/arch/arm/boot/zImage ]
-then
-echo "====kernel is ready===="
-echo "==== make ramdisk ===="
-cp -a ${rd}/ROOT-RAMDISK/* ${rdt}
-cp -a ${rd}/${cfg}-RAMDISK/* ${rdt}
-rm ${boot}/img/ramdisk.gz
-${boot}/tool/mkbootfs ${rdt} | gzip > ramdisk.gz 2>/dev/null
-mv ramdisk.gz $boot/img
-rm -r ${rdt}/*
-
-cp $ker/arch/arm/boot/zImage $boot/img/zImage
-$ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
-echo ${cl2}
-$boot/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.gz --cmdline "${cl2}" --base ${base} --offset ${offset} --tags-addr ${ta} --pagesize ${pg} --dt $boot/img/dt.img -o $boot/boot.img
-echo "====list dt.img & boot.img===="
-ls $boot/img/dt.img 
-ls $boot/boot.img
-
-#####automatic zip file name#####
-for (( code=1;  ; code++ ))
-do
-fm=LG-${cfg}-kernel-${cl}-t${code}-$da-nor.zip
-if [ -e ${out}/${cl}/${fm} ]
-then
-continue
-else
-break
-fi
-done
-############################
-mv $boot/boot.img $kw/boot.img
-rm $kw/system/lib/modules/*.*
-find $ker/ -name *.ko -exec cp -f {} $kw/system/lib/modules/ \;
-cd $kw
-zip -r temp.zip *
-cd ..
-mv $kw/temp.zip ${out}/${cl}/${fm}
-ls ${out}/${cl}/${fm}
-echo "====make ${cfg}-${cl} successed===="
-else
-echo "====make faile===="
-break
-fi
-done
-echo "today=$da"
-done
+# now let`s start
+echo "Maintask:d801 d802 f320"
+read num
+echo "Maintask:make kernel or repack ramdisk only."
+echo "Maintask:type "y" repack ramdisk,anykey make kernel."
+read ju
+if [ "${ju}" = "y" ];then
+	echo "Maintask:repack ramdisk only"
+		pack_ramdisk
+		else
+		echo "Maintask:make kernel"
+		make_kernel
+		echo "Maintask:pack ramdisk"
+		pack_ramdisk
 fi
