@@ -25,7 +25,6 @@ cmdline="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb
 # function pack ramdisk
 pack_ramdisk()
 {
-	for cfg in ${num} ; do
 			if [ -e $ker/arch/arm/boot/zImage ];then
 				echo "pack ramdisk:kernel is ready"
 				echo "pack ramdisk:make ramdisk"
@@ -41,14 +40,13 @@ pack_ramdisk()
 					echo "pack ramdisk:clean ramdisk temp folder"
 				fi
 				cp $ker/arch/arm/boot/zImage $boot/img/zImage
-				$ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
 				$boot/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.gz --cmdline "${cmdline}" --base ${base} --offset ${offset} --tags-addr ${ta} --pagesize ${pg} --dt $boot/img/dt.img -o $boot/boot.img
 				echo "pack ramdisk:list dt.img & boot.img"
 				ls $boot/img/dt.img
 				ls $boot/boot.img
 
 				# automatic zip file name
-				for (( code=1;  ; code++ ));do
+				for (( code=1;; code++ ));do
 					fm=LG-${cfg}-kernel-t${code}-$da-${relase}.zip
 						if [ -e ${out}/${fm} ];then
 						continue
@@ -64,6 +62,9 @@ pack_ramdisk()
 					rm $kw/system/lib/modules/*
 				fi
 				find $ker/ -name *.ko -exec cp -f {} $kw/system/lib/modules/ \;
+				# strip not needed debugs from modules.
+				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-unneeded ${kw}/system/lib/modules/* 2>/dev/null
+				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-debug ${kw}/system/lib/modules/* 2>/dev/null
 				cd $kw
 				zip -r temp.zip *
 				cd ..
@@ -74,7 +75,6 @@ pack_ramdisk()
 				echo "pack ramdisk:make faile"
 			break
 			fi
-		done
 		echo "today$da"
 }
 
@@ -82,7 +82,6 @@ pack_ramdisk()
 make_kernel()
 {
 		ccache -c
-		for cfg in ${num} ; do
 			config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
 				if [ -e $ker/arch/arm/boot/zImage  ] || [ -e $boot/img/dt.img ] ||  [ -e $boot/img/zImage ] || [ -e $boot/img/zImage ];then
 
@@ -124,8 +123,8 @@ make_kernel()
 				# time make -j$thr $config
 				time make -j${thr}
 				cd ..
+				$ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
 				echo "make kernel:finish make kernel"
-		done
 }
 
 # now let`s start
@@ -137,11 +136,16 @@ read ju
 if [ "${ju}" = "y" ];then
 	echo "Maintask:repack ramdisk only"
 		relase=mr
-		pack_ramdisk
+		for cfg in ${num} ; do
+			echo $cfg
+			pack_ramdisk
+		done
 		else
 		relase=nor
-		echo "Maintask:make kernel"
-		make_kernel
-		echo "Maintask:pack ramdisk"
-		pack_ramdisk
+		echo "Maintask:make kernel and pack ramdisk"
+		for cfg in ${num} ; do
+			echo $cfg
+			make_kernel
+			pack_ramdisk
+		done
 fi
