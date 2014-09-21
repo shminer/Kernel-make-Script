@@ -4,6 +4,7 @@
 # ${HOME}/lg
 
 #############################################################################
+main=${HOME}/lg/build
 ker=${HOME}/lg/LG-G2-Kernel
 boot=${HOME}/lg/boot
 out=${HOME}/lg/zipoutput
@@ -18,7 +19,7 @@ export arch=arm
 base=0x00000000
 offset=0x05000000
 ta=0x04800000
-pg=2048 
+pg=2048
 cmdline="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd"
 #############################################################################
 
@@ -28,6 +29,38 @@ pack_ramdisk()
 			if [ -e $ker/arch/arm/boot/zImage ];then
 				echo "pack ramdisk:kernel is ready"
 				echo "pack ramdisk:make ramdisk"
+				# automatic zip file name
+				if [ -e ./version ];then
+					echo "pack ramdisk:found version file"
+				else
+					echo "pack ramdisk:not found version file"
+					touch version
+				fi
+				sub=$(grep 'SUBLEVEL =.*' ${ker}/Makefile| sed '1,4s/ //g'| sed '1,4s/SUBLEVEL=//g');
+				rdsub=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed '1,11s/ //g'| sed '1,11s/.*3.4.//g' |sed '1,11s/"name=.*//g');
+				if [  $sub != $rdsub ];then
+				echo "update linux version"
+				sed -i -e "1,11s/$rdsub/$sub/" ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml;
+				fi
+				ver1=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed 's/ //g'| sed 's/.*ver-//g' |sed 's/\..*//g');
+				ver2=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed -e '1,11s/ //g'| sed  -e '1,11s/LIN.*//g'| sed -e '1,11s/.*ve.*\.//g' ) ;
+				ver3=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed 's/ //g'| sed 's/.*ver-//g' |sed 's/LIN.*//g');
+				let "ver2=${ver2}+1";
+				if [ $ver2 -ge "10" ] || [ $ver1 -le "0" ];then
+					ver2=0
+					let "ver1=${ver1}+1";
+				fi
+				code=${ver1}"."${ver2}
+				echo ${ver1}"."${ver2} > version
+				sed -i -e "1,11s/$ver3/$code/" ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml;
+				cd ${rd}
+				if [ -e /usr/bin/git ];then
+						git commit -am "AUTO COMMIT:update kernel version";
+						else
+						echo "pack ramdisk:please intsall git"
+				fi
+				cd ${main}
+				fm=LG-${cfg}-kernel-ver-${code}-$da-${relase}.zip
 				cp -a ${rd}/ROOT-RAMDISK/* ${rdt}
 				cp -a ${rd}/${cfg}-RAMDISK/* ${rdt}
 				if [ -e  ${boot}/img/ramdisk.gz ];then
@@ -44,17 +77,6 @@ pack_ramdisk()
 				echo "pack ramdisk:list dt.img & boot.img"
 				ls $boot/img/dt.img
 				ls $boot/boot.img
-
-				# automatic zip file name
-				for (( code=1;; code++ ));do
-					fm=LG-${cfg}-kernel-t${code}-$da-${relase}.zip
-						if [ -e ${out}/${fm} ];then
-						continue
-						else
-						break
-						fi
-				done
-
 				mv $boot/boot.img $kw/boot.img
 				r2=`ls $kw/system/lib/modules/ | wc -l`
 				if [ "${r2}"  != "0" ] ;then
@@ -72,8 +94,7 @@ pack_ramdisk()
 				ls ${out}/${fm}
 				echo "pack ramdisk:make boot.img ->${cfg} successed"
 				else
-				echo "pack ramdisk:make faile"
-			break
+				echo "pack ramdisk:make faile,not found zimage"
 			fi
 		echo "today$da"
 }
@@ -81,7 +102,7 @@ pack_ramdisk()
 # function make kernel
 make_kernel()
 {
-		ccache -c
+		#ccache -c
 			config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
 				if [ -e $ker/arch/arm/boot/zImage  ] || [ -e $boot/img/dt.img ] ||  [ -e $boot/img/zImage ] || [ -e $boot/img/zImage ];then
 
@@ -128,20 +149,20 @@ make_kernel()
 }
 
 # now let`s start
-echo "Maintask:d801 d802 f320"
+echo "Maintask:type defconfig information"
 read num
 echo "Maintask:make kernel or repack ramdisk only."
 echo "Maintask:type "y" repack ramdisk,anykey make kernel."
 read ju
 if [ "${ju}" = "y" ];then
 	echo "Maintask:repack ramdisk only"
-		relase=mr
+		relase=rrd
 		for cfg in ${num} ; do
 			echo $cfg
 			pack_ramdisk
 		done
 		else
-		relase=nor
+		relase=mkpr
 		echo "Maintask:make kernel and pack ramdisk"
 		for cfg in ${num} ; do
 			echo $cfg
