@@ -2,44 +2,61 @@
 
 # ${HOME}/
 # ${HOME}/lg
-
-#############################################################################
+# 
+# 这是一个编译内核并且打包内核的脚本工具，同时可以制作zip卡刷包。
+# 你需要有以下目录。
+# 如果ramdisk是已经打包好的，就需要在mkbootimg里面制定ramdisk文件的具体路径。
+# cfg和num变量是作为一个型号存在这个脚本的，真正的defconfig是通过cfg来实现的，num是装载所有型号或者config的容器。
+# 如果更换源码，需要重新编辑cfg功能，包括’pack_ramdisk‘和‘make_kernel’函数中的cfg变量。
+# arm构架设置和交叉编译工具可以使用相对路径。
+# 部分ramdisk的代码只能适用于当前G2的ramdisk，因为其存在特殊app。
+# 内核打包参数需要根据机器和官方参数设置。
+# 如果从我的git上fork，设置好目录后可以直接编译内核。
+###################################################################################################################
+#主目录
 main=${HOME}/lg/build
+# 内核目录
 ker=${HOME}/lg/LG-G2-Kernel
+# boot暂存目录
 boot=${HOME}/lg/boot
+# zip输出目录
 out=${HOME}/lg/zipoutput
+# zip打包的文件目录
 kw=${HOME}/lg/kernel-working
+# ramdisk目录
 rd=${HOME}/lg/LG-G2-D802-Ramdisk
+# ramdisk临时目录
 rdt=${boot}/temp/rd-temp
 da=`date +%y_%m_%d`
 thr=`grep processor /proc/cpuinfo -c`
+# 设置交叉编译工具目录变量
 export CROSS_COMPILE=${HOME}/lg/LG-G2-Kernel/android-toolchain/bin/arm-eabi-
+# 设置变量arm构架
 export arch=arm
-#############################################################################
+#############################设置内核打包参数################################
 base=0x00000000
 offset=0x05000000
 ta=0x04800000
 pg=2048
-cmdline="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd"
+cmdline="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_r0tb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd"
 #############################################################################
 
-# function pack ramdisk
+# 打包ramdisk函数
 pack_ramdisk()
 {
 			if [ -e $ker/arch/arm/boot/zImage ];then
-				echo "pack ramdisk:kernel is ready"
-				echo "pack ramdisk:make ramdisk"
-				# automatic zip file name
+				echo "pack ramdisk:内核已经准备好，准备打包ramdisk。"
+				# 自动设置文件名
 				if [ -e ./version ];then
-					echo "pack ramdisk:found version file"
+					echo "pack ramdisk:找到‘version‘"
 				else
-					echo "pack ramdisk:not found version file"
+					echo "pack ramdisk:找不到’version‘"
 					touch version
 				fi
 				sub=$(grep 'SUBLEVEL =.*' ${ker}/Makefile| sed '1,4s/ //g'| sed '1,4s/SUBLEVEL=//g');
 				rdsub=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed '1,11s/ //g'| sed '1,11s/.*3.4.//g' |sed '1,11s/"name=.*//g');
 				if [  $sub != $rdsub ];then
-				echo "update linux version"
+				echo "pack ramdisk:升级app linux版本"
 				sed -i -e "1,11s/$rdsub/$sub/" ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml;
 				fi
 				ver1=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed 's/ //g'| sed 's/.*ver-//g' |sed 's/\..*//g');
@@ -55,9 +72,9 @@ pack_ramdisk()
 				sed -i -e "1,11s/$ver3/$code/" ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml;
 				cd ${rd}
 				if [ -e /usr/bin/git ];then
-						git commit -am "AUTO COMMIT:update kernel version";
+						git commit -am "自动提交GIT:升级ramdisk版本。";
 						else
-						echo "pack ramdisk:please intsall git"
+						echo "pack ramdisk:请安装GIT。"
 				fi
 				cd ${main}
 				fm=LG-${cfg}-kernel-ver-${code}-$da-${relase}.zip
@@ -70,7 +87,7 @@ pack_ramdisk()
 				mv ramdisk.gz $boot/img
 				if [ "$(ls ${rdt} | wc -l )"  != "0" ] ;then
 					rm -r ${rdt}/*
-					echo "pack ramdisk:clean ramdisk temp folder"
+					echo "pack ramdisk:清空临时ramdisk目录。"
 				fi
 				cp $ker/arch/arm/boot/zImage $boot/img/zImage
 				$boot/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.gz --cmdline "${cmdline}" --base ${base} --offset ${offset} --tags-addr ${ta} --pagesize ${pg} --dt $boot/img/dt.img -o $boot/boot.img
@@ -80,7 +97,7 @@ pack_ramdisk()
 				mv $boot/boot.img $kw/boot.img
 				r2=`ls $kw/system/lib/modules/ | wc -l`
 				if [ "${r2}"  != "0" ] ;then
-					echo "pack ramdisk:clean kernel work folder"
+					echo "pack ramdisk:清空内核模块目录。"
 					rm $kw/system/lib/modules/*
 				fi
 				find $ker/ -name *.ko -exec cp -f {} $kw/system/lib/modules/ \;
@@ -92,9 +109,9 @@ pack_ramdisk()
 				cd ..
 				mv $kw/temp.zip ${out}/${fm}
 				ls ${out}/${fm}
-				echo "pack ramdisk:make boot.img ->${cfg} successed"
+				echo "pack ramdisk:编译 boot.img ->${cfg} 成功。"
 				else
-				echo "pack ramdisk:make faile,not found zimage"
+				echo "pack ramdisk:编译失败，没有找到zImage。"
 			fi
 		echo "today$da"
 }
@@ -103,29 +120,30 @@ pack_ramdisk()
 make_kernel()
 {
 		#ccache -c
+			# 我这里使用型号识别defconfig，如果编译其他内核，还需要把整个cfg变量都设置为config文件名。
 			config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
 				if [ -e $ker/arch/arm/boot/zImage  ] || [ -e $boot/img/dt.img ] ||  [ -e $boot/img/zImage ] || [ -e $boot/img/zImage ];then
 
 					if [ -e $boot/img/dt.img ];then
-						echo "make kernel:cleaning dt"
+						echo "make kernel:清除DT.img。"
 						rm $boot/img/dt.img
 					fi
 
 					if [ -e $boot/img/zImage ];then
-					echo "make kernel:cleaning zImage"
+					echo "make kernel:删除 zImage。"
 					rm $boot/img/zImage
 					fi
 
-					if [ -e $boot/img/zImage ];then
-						echo "make kernel:cleaning boot"
+					if [ -e $kw/boot.img ];then
+						echo "make kernel:清空 boot.img。"
 						rm $kw/boot.img
 					fi
 
-					echo "make kernel:clear finish"
+					echo "make kernel:清除完毕。"
 					else
-					echo "make kernel:folder is clear"
+					echo "make kernel:编译目录是干净的。"
 				fi
-				echo "make kernel:making kernel"
+				echo "make kernel:准备编译内核。"
 				cd $ker
 				echo "$config"
 				for i in `find . -type f \( -iname \*.rej \
@@ -145,17 +163,16 @@ make_kernel()
 				time make -j${thr}
 				cd ..
 				$ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
-				echo "make kernel:finish make kernel"
+				echo "make kernel:编译完毕。"
 }
 
 # now let`s start
-echo "Maintask:type defconfig information"
+echo "Maintask:输入defconfig信息。"
 read num
-echo "Maintask:make kernel or repack ramdisk only."
-echo "Maintask:type "y" repack ramdisk,anykey make kernel."
+echo "Maintask:输入'Y'仅重新打包ramdisk，任意键重新编译内核。"
 read ju
-if [ "${ju}" = "y" ];then
-	echo "Maintask:repack ramdisk only"
+if [ "${ju}" = "y" ] || [ "${ju}" = "Y" ];then
+	echo "Maintask:仅重新打包ramdisk并且制zip卡刷包。"
 		relase=rrd
 		for cfg in ${num} ; do
 			echo $cfg
@@ -163,7 +180,7 @@ if [ "${ju}" = "y" ];then
 		done
 		else
 		relase=mkpr
-		echo "Maintask:make kernel and pack ramdisk"
+		echo "Maintask:编译内核并且打包ramdisk制作成zip卡刷包。"
 		for cfg in ${num} ; do
 			echo $cfg
 			make_kernel
