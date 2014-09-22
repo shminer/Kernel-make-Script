@@ -116,7 +116,7 @@ make_kernel()
 					rm $boot/img/zImage
 					fi
 
-					if [ -e $boot/img/zImage ];then
+					if [ -e $kw/boot.img ];then
 						echo "make kernel:cleaning boot"
 						rm $kw/boot.img
 					fi
@@ -154,7 +154,7 @@ read num
 echo "Maintask:make kernel or repack ramdisk only."
 echo "Maintask:type "y" repack ramdisk,anykey make kernel."
 read ju
-if [ "${ju}" = "y" ];then
+if [ "${ju}" = "y" ] || [ "${ju}" = "Y" ];then
 	echo "Maintask:repack ramdisk only"
 		relase=rrd
 		for cfg in ${num} ; do
