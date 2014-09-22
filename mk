@@ -1,0 +1,172 @@
+#!/bin/bash
+
+# ${HOME}/
+# ${HOME}/lg
+
+#############################################################################
+main=${HOME}/lg/build
+ker=${HOME}/lg/LG-G2-Kernel
+boot=${HOME}/lg/boot
+out=${HOME}/lg/zipoutput
+kw=${HOME}/lg/kernel-working
+rd=${HOME}/lg/LG-G2-D802-Ramdisk
+rdt=${boot}/temp/rd-temp
+da=`date +%y_%m_%d`
+thr=`grep processor /proc/cpuinfo -c`
+export CROSS_COMPILE=${HOME}/lg/LG-G2-Kernel/android-toolchain/bin/arm-eabi-
+export arch=arm
+#############################################################################
+base=0x00000000
+offset=0x05000000
+ta=0x04800000
+pg=2048
+cmdline="console=ttyHSL0,115200,n8 androidboot.hardware=g2 user_debug=31 msm_rtb.filter=0x0 mdss_mdp.panel=1:dsi:0:qcom,mdss_dsi_g2_lgd_cmd"
+#############################################################################
+
+# function pack ramdisk
+pack_ramdisk()
+{
+			if [ -e $ker/arch/arm/boot/zImage ];then
+				echo "pack ramdisk:kernel is ready"
+				echo "pack ramdisk:make ramdisk"
+				# automatic zip file name
+				if [ -e ./version ];then
+					echo "pack ramdisk:found version file"
+				else
+					echo "pack ramdisk:not found version file"
+					touch version
+				fi
+				sub=$(grep 'SUBLEVEL =.*' ${ker}/Makefile| sed '1,4s/ //g'| sed '1,4s/SUBLEVEL=//g');
+				rdsub=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed '1,11s/ //g'| sed '1,11s/.*3.4.//g' |sed '1,11s/"name=.*//g');
+				if [  $sub != $rdsub ];then
+				echo "update linux version"
+				sed -i -e "1,11s/$rdsub/$sub/" ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml;
+				fi
+				ver1=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed 's/ //g'| sed 's/.*ver-//g' |sed 's/\..*//g');
+				ver2=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed -e '1,11s/ //g'| sed  -e '1,11s/LIN.*//g'| sed -e '1,11s/.*ve.*\.//g' ) ;
+				ver3=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed 's/ //g'| sed 's/.*ver-//g' |sed 's/LIN.*//g');
+				let "ver2=${ver2}+1";
+				if [ $ver2 -ge "10" ] || [ $ver1 -le "0" ];then
+					ver2=0
+					let "ver1=${ver1}+1";
+				fi
+				code=${ver1}"."${ver2}
+				echo ${ver1}"."${ver2} > version
+				sed -i -e "1,11s/$ver3/$code/" ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml;
+				cd ${rd}
+				if [ -e /usr/bin/git ];then
+						git commit -am "AUTO COMMIT:update kernel version";
+						else
+						echo "pack ramdisk:please intsall git"
+				fi
+				cd ${main}
+				fm=LG-${cfg}-kernel-ver-${code}-$da-${relase}.zip
+				cp -a ${rd}/ROOT-RAMDISK/* ${rdt}
+				cp -a ${rd}/${cfg}-RAMDISK/* ${rdt}
+				if [ -e  ${boot}/img/ramdisk.gz ];then
+					rm ${boot}/img/ramdisk.gz
+				fi
+				${boot}/tool/mkbootfs ${rdt} | gzip > ramdisk.gz 2>/dev/null
+				mv ramdisk.gz $boot/img
+				if [ "$(ls ${rdt} | wc -l )"  != "0" ] ;then
+					rm -r ${rdt}/*
+					echo "pack ramdisk:clean ramdisk temp folder"
+				fi
+				cp $ker/arch/arm/boot/zImage $boot/img/zImage
+				$boot/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.gz --cmdline "${cmdline}" --base ${base} --offset ${offset} --tags-addr ${ta} --pagesize ${pg} --dt $boot/img/dt.img -o $boot/boot.img
+				echo "pack ramdisk:list dt.img & boot.img"
+				ls $boot/img/dt.img
+				ls $boot/boot.img
+				mv $boot/boot.img $kw/boot.img
+				r2=`ls $kw/system/lib/modules/ | wc -l`
+				if [ "${r2}"  != "0" ] ;then
+					echo "pack ramdisk:clean kernel work folder"
+					rm $kw/system/lib/modules/*
+				fi
+				find $ker/ -name *.ko -exec cp -f {} $kw/system/lib/modules/ \;
+				# strip not needed debugs from modules.
+				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-unneeded ${kw}/system/lib/modules/* 2>/dev/null
+				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-debug ${kw}/system/lib/modules/* 2>/dev/null
+				cd $kw
+				zip -r temp.zip *
+				cd ..
+				mv $kw/temp.zip ${out}/${fm}
+				ls ${out}/${fm}
+				echo "pack ramdisk:make boot.img ->${cfg} successed"
+				else
+				echo "pack ramdisk:make faile,not found zimage"
+			fi
+		echo "today$da"
+}
+
+# function make kernel
+make_kernel()
+{
+		#ccache -c
+			config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
+				if [ -e $ker/arch/arm/boot/zImage  ] || [ -e $boot/img/dt.img ] ||  [ -e $boot/img/zImage ] || [ -e $boot/img/zImage ];then
+
+					if [ -e $boot/img/dt.img ];then
+						echo "make kernel:cleaning dt"
+						rm $boot/img/dt.img
+					fi
+
+					if [ -e $boot/img/zImage ];then
+					echo "make kernel:cleaning zImage"
+					rm $boot/img/zImage
+					fi
+
+					if [ -e $boot/img/zImage ];then
+						echo "make kernel:cleaning boot"
+						rm $kw/boot.img
+					fi
+
+					echo "make kernel:clear finish"
+					else
+					echo "make kernel:folder is clear"
+				fi
+				echo "make kernel:making kernel"
+				cd $ker
+				echo "$config"
+				for i in `find . -type f \( -iname \*.rej \
+                                -o -iname \*.orig \
+                                -o -iname \*.bkp \
+                                -o -iname \*.ko \
+                                -o -iname \*.c.BACKUP.[0-9]*.c \
+                                -o -iname \*.c.BASE.[0-9]*.c \
+                                -o -iname \*.c.LOCAL.[0-9]*.c \
+                                -o -iname \*.c.REMOTE.[0-9]*.c \
+                                -o -iname \*.org \)`; do
+								rm -vf $i;
+				done;
+				make  clean && make mrproper
+				cp $config .config;
+				# time make -j$thr $config
+				time make -j${thr}
+				cd ..
+				$ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
+				echo "make kernel:finish make kernel"
+}
+
+# now let`s start
+echo "Maintask:type defconfig information"
+read num
+echo "Maintask:make kernel or repack ramdisk only."
+echo "Maintask:type "y" repack ramdisk,anykey make kernel."
+read ju
+if [ "${ju}" = "y" ];then
+	echo "Maintask:repack ramdisk only"
+		relase=rrd
+		for cfg in ${num} ; do
+			echo $cfg
+			pack_ramdisk
+		done
+		else
+		relase=mkpr
+		echo "Maintask:make kernel and pack ramdisk"
+		for cfg in ${num} ; do
+			echo $cfg
+			make_kernel
+			pack_ramdisk
+		done
+fi
