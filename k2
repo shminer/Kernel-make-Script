@@ -39,16 +39,21 @@ pack_ramdisk()
 				sub=$(grep 'SUBLEVEL =.*' ${ker}/Makefile| sed '1,4s/ //g'| sed '1,4s/SUBLEVEL=//g');
 				rdsub=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed '1,11s/ //g'| sed '1,11s/.*3.4.//g' |sed '1,11s/"name=.*//g');
 				if [  $sub != $rdsub ];then
-				echo "update linux version"
+				echo "pack ramdisk:update linux version"
 				sed -i -e "1,11s/$rdsub/$sub/" ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml;
 				fi
 				ver1=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed 's/ //g'| sed 's/.*ver-//g' |sed 's/\..*//g');
 				ver2=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed -e '1,11s/ //g'| sed  -e '1,11s/LIN.*//g'| sed -e '1,11s/.*ve.*\.//g' ) ;
 				ver3=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed 's/ //g'| sed 's/.*ver-//g' |sed 's/LIN.*//g');
 				let "ver2=${ver2}+1";
-				if [ $ver2 -ge "10" ] || [ $ver1 -le "0" ];then
-					ver2=0
-					let "ver1=${ver1}+1";
+				if [ -e  ${tmp}/mkflag ];then
+					echo "pack ramdisk:mkflag exist"
+					else
+					let "ver2=${ver2}+1";
+					if [ $ver2 -ge "10" ] || [ $ver1 -le "0" ];then
+						ver2=0
+						let "ver1=${ver1}+1";
+					fi
 				fi
 				code=${ver1}"."${ver2}
 				echo ${ver1}"."${ver2} > version
@@ -102,7 +107,7 @@ pack_ramdisk()
 # function make kernel
 make_kernel()
 {
-		#ccache -c
+		ccache -c
 			config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
 				if [ -e $ker/arch/arm/boot/zImage  ] || [ -e $boot/img/dt.img ] ||  [ -e $boot/img/zImage ] || [ -e $boot/img/zImage ];then
 
