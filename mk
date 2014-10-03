@@ -178,7 +178,9 @@ mk_flag()
 	echo "Maintask:输入‘y’升级编译版本。"
 	read ju1
 	if [ "${ju1}" = "y" ] || [ "${ju1}" = "Y" ];then
-		rm ${tmp}/mkflag;
+		if [ -e ${tmp}/mkflag ];then
+			 rm ${tmp}/mkflag;
+		fi
 		else
 		touch ${tmp}/mkflag;
 	fi
