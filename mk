@@ -107,6 +107,7 @@ pack_ramdisk()
 					rm $kw/system/lib/modules/*
 				fi
 				find $ker/ -name *.ko -exec cp -f {} $kw/system/lib/modules/ \;
+				cp ../texfat.ko $kw/system/lib/modules/;
 				# strip not needed debugs from modules.
 				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-unneeded ${kw}/system/lib/modules/* 2>/dev/null
 				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-debug ${kw}/system/lib/modules/* 2>/dev/null
