@@ -101,6 +101,8 @@ pack_ramdisk()
 				ls $boot/img/dt.img
 				ls $boot/boot.img
 				mv $boot/boot.img $kw/boot.img
+				echo "pack ramdisk:BUMP内核！"
+				mk_flag
 				r2=`ls $kw/system/lib/modules/ | wc -l`
 				if [ "${r2}"  != "0" ] ;then
 					echo "pack ramdisk:清空内核模块目录。"
@@ -171,6 +173,18 @@ make_kernel()
 				cd ..
 				$ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
 				echo "make kernel:编译完毕。"
+}
+
+kernel_bump()
+{
+	PYTHON_CHECK=$(ls -la /usr/bin/python2 | wc -l);
+	BOOT_IMAGE_LOCATION=$kw/boot.img;
+	if [ "$PYTHON_CHECK" -eq "1" ]; then
+		/usr/bin/python2 ${main}/open_bump.py ${BOOT_IMAGE_LOCATION};
+	else
+		echo "you dont have PYTHON2.x script will not work!!!";
+	exit 1;
+fi;
 }
 
 # 内核版本升级标识
