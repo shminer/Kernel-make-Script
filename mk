@@ -177,15 +177,11 @@ make_kernel()
 
 kernel_bump()
 {
-	PYTHON_CHECK=$(ls -la /usr/bin/python2 | wc -l);
-	BOOT_IMAGE_LOCATION=$kw/boot.img;
-	if [ "$PYTHON_CHECK" -eq "1" ]; then
-		/usr/bin/python2 ${main}/open_bump.py ${BOOT_IMAGE_LOCATION};
-		rm $kw/boot.img
-		mv $kw/boot_bumped.img $kw/boot.img
-	else
-		echo "you dont have PYTHON2.x script will not work!!!";
-	exit 1;
+	py_check=$(ls -la /usr/bin/python2 | wc -l);
+	if [ "${py_check}" -eq "1" ]; then
+		/usr/bin/python2 ${main}/open_bump.py ${kw}/boot.img;
+		rm ${kw}/boot.img
+		mv ${kw}/boot_bumped.img ${kw}/boot.img
 fi;
 }
 
