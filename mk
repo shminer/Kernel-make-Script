@@ -16,7 +16,7 @@
 #主目录
 main=${HOME}/lg/build
 # 内核目录
-ker=${HOME}/lg/LG-G2-Kernel
+ker=${HOME}/lg/g2
 # boot暂存目录
 boot=${HOME}/lg/boot
 # zip输出目录
@@ -24,7 +24,7 @@ out=${HOME}/lg/zipoutput
 # zip打包的文件目录
 kw=${HOME}/lg/kernel-working
 # ramdisk目录
-rd=${HOME}/lg/LG-G2-D802-Ramdisk
+rd=${HOME}/lg/g2r
 # ramdisk临时目录
 rdt=${boot}/temp/rd-temp
 # 临时目录
@@ -32,9 +32,9 @@ tmp=${boot}/temp
 da=`date +%y_%m_%d`
 thr=`grep processor /proc/cpuinfo -c`
 # 设置交叉编译工具目录变量
-export CROSS_COMPILE=${HOME}/lg/LG-G2-Kernel/android-toolchain/bin/arm-eabi-
+export CROSS_COMPILE=${ker}/android-toolchain/bin/arm-eabi-
 # 设置变量arm构架
-export arch=arm
+export ARCH=arm
 #############################设置内核打包参数################################
 base=0x00000000
 offset=0x05000000
@@ -102,13 +102,14 @@ pack_ramdisk()
 				ls $boot/boot.img
 				mv $boot/boot.img $kw/boot.img
 				echo "pack ramdisk:BUMP内核！"
-				mk_flag
+				kernel_bump
 				r2=`ls $kw/system/lib/modules/ | wc -l`
 				if [ "${r2}"  != "0" ] ;then
 					echo "pack ramdisk:清空内核模块目录。"
 					rm $kw/system/lib/modules/*
 				fi
-				find $ker/ -name *.ko -exec cp -f {} $kw/system/lib/modules/ \;
+				echo "pack ramdisk:拷贝模块。"
+				find ${ker} -name \*.ko -exec cp -f {} $kw/system/lib/modules/ \;
 				cp ../texfat.ko $kw/system/lib/modules/;
 				# strip not needed debugs from modules.
 				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-unneeded ${kw}/system/lib/modules/* 2>/dev/null
@@ -118,7 +119,7 @@ pack_ramdisk()
 				cd ..
 				mv $kw/temp.zip ${out}/${fm}
 				ls ${out}/${fm}
-				echo "pack ramdisk:编译 boot.img ->${cfg} 成功。"
+				echo "pack ramdisk:编译 boot.img ->${cfg} 打包成功。"
 				else
 				echo "pack ramdisk:编译失败，没有找到zImage。"
 			fi
@@ -128,7 +129,6 @@ pack_ramdisk()
 # function make kernel
 make_kernel()
 {
-		ccache -c
 			# 我这里使用型号识别defconfig，如果编译其他内核，还需要把整个cfg变量都设置为config文件名。
 			config=$ker/arch/arm/configs/dorimanx_${cfg}_defconfig
 				if [ -e $ker/arch/arm/boot/zImage  ] || [ -e $boot/img/dt.img ] ||  [ -e $boot/img/zImage ] || [ -e $boot/img/zImage ];then
@@ -154,6 +154,14 @@ make_kernel()
 				fi
 				echo "make kernel:准备编译内核。"
 				cd $ker
+				echo "make kernel:执行make  clean？"
+				read cl
+				if [ "${cl}" = "Y " ] || [ "${cl}" = "y" ];then
+						ccache -c
+						make clean && make mrproper
+						cp $config .config;
+						# time make -j$thr $config;
+				fi
 				echo "$config"
 				for i in `find . -type f \( -iname \*.rej \
                                 -o -iname \*.orig \
@@ -166,26 +174,23 @@ make_kernel()
                                 -o -iname \*.org \)`; do
 								rm -vf $i;
 				done;
-				make  clean && make mrproper
-				cp $config .config;
-				# time make -j$thr $config
+
 				time make -j${thr}
 				cd ..
 				$ker/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/
 				echo "make kernel:编译完毕。"
 }
-
+# function kernel_bump
 kernel_bump()
 {
 	PYTHON_CHECK=$(ls -la /usr/bin/python2 | wc -l);
-	BOOT_IMAGE_LOCATION=$kw/boot.img;
+	BOOT_IMAGE_LOCATION=${kw}/boot.img;
 	if [ "$PYTHON_CHECK" -eq "1" ]; then
-		/usr/bin/python2 ${main}/open_bump.py ${BOOT_IMAGE_LOCATION};
-		rm $kw/boot.img
-		mv $kw/boot_bumped.img $kw/boot.img
+		/usr/bin/python2 ${main}/open_bump.py ${BOOT_IMAGE_LOCATION} ;
+		rm ${kw}/boot.img
+		mv ${kw}/boot_bumped.img ${kw}/boot.img
 	else
 		echo "you dont have PYTHON2.x script will not work!!!";
-	exit 1;
 fi;
 }
 
