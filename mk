@@ -191,7 +191,7 @@ kernel_bump()
 		mv ${kw}/boot_bumped.img ${kw}/boot.img
 	else
 		echo "you dont have PYTHON2.x script will not work!!!";
-fi;
+	fi;
 }
 
 # 内核版本升级标识
