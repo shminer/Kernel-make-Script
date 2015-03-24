@@ -50,7 +50,7 @@ cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 msm
 # 打包ramdisk函数
 pack_ramdisk()
 {
-			if [ -e ${ker}/arch/arm/boot/zImage ];then
+			if  [ -e ${ker}/arch/arm/boot/zImage ] && [ -e ${boot}/img/dt.img ] ;then
 				echo "pack ramdisk:内核已经准备好，准备打包ramdisk。"
 				# 自动设置文件名
 				#if [ -e ./version ];then
@@ -138,7 +138,7 @@ pack_ramdisk()
 				echo "================================================"
 				echo "================================================"
 				else
-				echo "pack ramdisk:打包失败，没有找到zImage。"
+				echo "pack ramdisk:打包失败，请查看dt.img zimage是否生成。"
 			fi
 }
 
@@ -147,7 +147,7 @@ make_kernel()
 {
 			# 我这里使用型号识别defconfig，如果编译其他内核，还需要把整个cfg变量都设置为config文件名。
 			config=${ker}/arch/arm/configs/JZ_${cfg}_defconfig
-				if [ -e ${ker}/arch/arm/boot/zImage  ] || [ -e ${boot}/img/dt.img ] ||  [ -e ${boot}/img/zImage ] || [ -e ${boot}/img/zImage ];then
+				if [ -e ${ker}/arch/arm/boot/zImage  ]  &&  [ -e ${boot}/img/dt.img ]  &&  [ -e ${boot}/img/zImage ]  &&  [ -e ${boot}/img/zImage ];then
 
 					if [ -e ${boot}/img/dt.img ];then
 						echo "make kernel:清除DT.img。"
