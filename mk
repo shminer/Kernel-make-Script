@@ -119,7 +119,8 @@ pack_ramdisk()
 				echo "pack ramdisk:拷贝模块。"
 				find ${ker} -name \*.ko -exec cp -f {} $kw/system/lib/modules/ \;
 				# cp -a ${main}/mhi.ko ${kw}/system/lib/modules/;
-				# cp -a ${main}/texfat.ko ${kw}/system/lib/modules/;
+				# I build it form LG,so we dont need fs/exfat
+				cp -a ${main}/texfat.ko ${kw}/system/lib/modules/;
 				# strip not needed debugs from modules.
 				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-unneeded ${kw}/system/lib/modules/* 2>/dev/null
 				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-debug ${kw}/system/lib/modules/* 2>/dev/null
