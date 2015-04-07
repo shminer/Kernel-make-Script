@@ -50,6 +50,9 @@ cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 msm
 # 打包ramdisk函数
 pack_ramdisk()
 {
+	if [ ${faile} = "1" ];then
+		echo "pack ramdisk:内核编译失败"
+	else
 			if  [ -e ${ker}/arch/arm/boot/zImage ] && [ -e ${boot}/img/dt.img ] ;then
 				echo "pack ramdisk:内核已经准备好，准备打包ramdisk。"
 				# 自动设置文件名
@@ -118,6 +121,7 @@ pack_ramdisk()
 				fi
 				echo "pack ramdisk:拷贝模块。"
 				find ${ker} -name \*.ko -exec cp -f {} $kw/system/lib/modules/ \;
+				countfo=`ls ${kw}/system/lib/modules/ | wc -l`
 				# cp -a ${main}/mhi.ko ${kw}/system/lib/modules/;
 				# I build it form LG,so we dont need fs/exfat
 				cp -a ${main}/texfat.ko ${kw}/system/lib/modules/;
@@ -132,7 +136,7 @@ pack_ramdisk()
 				countf=`ls ${kw}/system/lib/modules/ | wc -l`
 				echo "================================================"
 				echo "================================================"
-				echo "共${countf}个模块"
+				echo "共打包${countf}个模块,内核共${countfo}个模块。"
 				echo "编译内核 ->${cfg} 打包成功"
 				echo "生成文件:${fm}"
 				echo "文件路径:${out}"
@@ -141,6 +145,7 @@ pack_ramdisk()
 				else
 				echo "pack ramdisk:打包失败，请查看dt.img zimage是否生成。"
 			fi
+		fi
 }
 
 # function make kernel
@@ -197,10 +202,11 @@ make_kernel()
 				chmod +x ${ker}/scripts/dtbTool
 				if [ -e ${ker}/arch/arm/boot/zImage ];then
 				${ker}/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/dts/
+				echo "make kernel:编译完毕。"
 				else
+				faile=1
 				echo "make kernel:编译没有完成"
 				fi
-				echo "make kernel:编译完毕。"
 }
 # function kernel_bump
 kernel_bump()
@@ -230,6 +236,11 @@ mk_flag()
 	fi
 }
 # now let`s start
+# clear zimage to avoid pack issues
+if [ -e ${ker}/arch/arm/boot/zImage ];then
+	rm ${ker}/arch/arm/boot/zImage;
+fi
+printf "\ec"
 echo "Maintask:输入defconfig信息。"
 num=f460
 echo "Maintask:输入'Y'仅重新打包ramdisk，任意键重新编译内核。"
