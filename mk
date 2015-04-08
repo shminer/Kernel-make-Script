@@ -236,10 +236,6 @@ mk_flag()
 	fi
 }
 # now let`s start
-# clear zimage to avoid pack issues
-if [ -e ${ker}/arch/arm/boot/zImage ];then
-	rm ${ker}/arch/arm/boot/zImage;
-fi
 faile=0
 printf "\ec"
 echo "Maintask:输入defconfig信息。"
@@ -256,6 +252,10 @@ if [ "${ju}" = "y" ] || [ "${ju}" = "Y" ];then
 		done
 		else
 		echo "Maintask:编译内核并且打包ramdisk制作成zip卡刷包。"
+		# clear zimage to avoid pack issues
+		if [ -e ${ker}/arch/arm/boot/zImage ];then
+			rm ${ker}/arch/arm/boot/zImage;
+		fi
 		relase=mkpr
 		mk_flag
 		for cfg in ${num} ; do
