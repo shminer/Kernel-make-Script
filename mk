@@ -50,7 +50,7 @@ cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 msm
 # 打包ramdisk函数
 pack_ramdisk()
 {
-	if [ ${faile} = "1" ];then
+	if  [ ${faile} = 1 ]; then
 		echo "pack ramdisk:内核编译失败"
 	else
 			if  [ -e ${ker}/arch/arm/boot/zImage ] && [ -e ${boot}/img/dt.img ] ;then
@@ -255,6 +255,7 @@ if [ "${ju}" = "y" ] || [ "${ju}" = "Y" ];then
 		done
 		else
 		echo "Maintask:编译内核并且打包ramdisk制作成zip卡刷包。"
+		faile=0
 		relase=mkpr
 		mk_flag
 		for cfg in ${num} ; do
