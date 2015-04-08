@@ -132,10 +132,15 @@ pack_ramdisk()
 				zip -r temp.zip *
 				cd ..
 				mv $kw/temp.zip ${out}/${fm}
-				lsfm=`ls ${out}/${fm}`
+				if [ ${relase} == "rrd" ];then
+					Cmode="only repack ramdisk and zip pack"
+				else
+					Cmode="make kernel and zip pack"
+				fi
 				countf=`ls ${kw}/system/lib/modules/ | wc -l`
 				echo "================================================"
 				echo "================================================"
+				echo "编译模式:${Cmode}"
 				echo "共打包${countf}个模块,内核共${countfo}个模块。"
 				echo "编译内核 ->${cfg} 打包成功"
 				echo "生成文件:${fm}"
@@ -153,21 +158,26 @@ make_kernel()
 {
 			# 我这里使用型号识别defconfig，如果编译其他内核，还需要把整个cfg变量都设置为config文件名。
 			config=${ker}/arch/arm/configs/JZ_${cfg}_defconfig
-				if [ -e ${ker}/arch/arm/boot/zImage  ]  &&  [ -e ${boot}/img/dt.img ]  &&  [ -e ${boot}/img/zImage ]  &&  [ -e ${boot}/img/zImage ];then
+				if [ -e ${ker}/arch/arm/boot/zImage  ]  ||  [ -e ${boot}/img/dt.img ]  ||  [ -e ${boot}/img/zImage ]  ||  [ -e ${kw}/boot.img ];then
 
 					if [ -e ${boot}/img/dt.img ];then
-						echo "make kernel:清除DT.img。"
+						echo "make kernel:删除DT.img。"
 						rm $boot/img/dt.img
 					fi
 
 					if [ -e ${boot}/img/zImage ];then
-					echo "make kernel:删除 zImage。"
-					rm ${boot}/img/zImage
+						echo "make kernel:删除zImage。"
+						rm ${boot}/img/zImage
 					fi
 
 					if [ -e ${kw}/boot.img ];then
-						echo "make kernel:清空 boot.img。"
+						echo "make kernel:删除boot.img。"
 						rm ${kw}/boot.img
+					fi
+
+					if [ -e ${ker}/arch/arm/boot/zImage ];then
+						echo "make kernel:删除编译文件。"
+						rm ${ker}/arch/arm/boot/zImage
 					fi
 
 					echo "make kernel:清除完毕。"
@@ -252,10 +262,6 @@ if [ "${ju}" = "y" ] || [ "${ju}" = "Y" ];then
 		done
 		else
 		echo "Maintask:编译内核并且打包ramdisk制作成zip卡刷包。"
-		# clear zimage to avoid pack issues
-		if [ -e ${ker}/arch/arm/boot/zImage ];then
-			rm ${ker}/arch/arm/boot/zImage;
-		fi
 		relase=mkpr
 		mk_flag
 		for cfg in ${num} ; do
