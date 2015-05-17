@@ -44,7 +44,7 @@ ka=0x00008000
 offset=0x02000000
 ta=0x00000100
 pg=4096
-cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 msm_rtb.filter=0x3b7 dwc3_msm.cpu_to_affin=1 androidboot.hardware=tiger6 androidboot.selinux=permissive"
+cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 dwc3_msm.cpu_to_affin=1 androidboot.hardware=tiger6 androidboot.selinux=permissive"
 #############################################################################
 
 # 打包ramdisk函数
@@ -189,7 +189,7 @@ make_kernel()
 				echo "make kernel:执行make  clean？"
 				read cl
 				if [ "${cl}" = "Y " ] || [ "${cl}" = "y" ];then
-						ccache -c
+						# ccache -c
 						make clean && make mrproper
 						for i in `find . -type f \( -iname \*.rej \
                                 -o -iname \*.orig \
@@ -202,7 +202,7 @@ make_kernel()
                                 -o -iname \*.org \)`; do
 								rm -vf $i;
 						done;
-						cp ${config} .config;
+						# cp ${config} .config;
 						make -j${thr} JZ_${cfg}_defconfig
 				fi
 				echo "$config"
