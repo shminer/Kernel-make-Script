@@ -56,24 +56,10 @@ pack_ramdisk()
 			if  [ -e ${ker}/arch/arm/boot/zImage ] && [ -e ${boot}/img/dt.img ] ;then
 				echo "pack ramdisk:内核已经准备好，准备打包ramdisk。"
 				# 自动设置文件名
-				#if [ -e ./version ];then
-					#echo "pack ramdisk:找到‘version‘"
-				#else
-					#echo "pack ramdisk:找不到’version‘"
-					#touch version
-				#fi
-				#sub=$(grep 'SUBLEVEL =.*' ${ker}/Makefile| sed '1,4s/ //g'| sed '1,4s/SUBLEVEL=//g');
-				#rdsub=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed '1,11s/ //g'| sed '1,11s/.*3.4.//g' |sed '1,11s/"name=.*//g');
-				#if [  $sub != $rdsub ];then
-				#echo "pack ramdisk:升级app linux版本"
-				#sed -i -e "1,11s/$rdsub/$sub/" ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml;
-				#fi
-				#ver1=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed 's/ //g'| sed 's/.*ver-//g' |sed 's/\..*//g');
-				#ver2=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed -e '1,11s/ //g'| sed  -e '1,11s/LIN.*//g'| sed -e '1,11s/.*ve.*\.//g' ) ;
-				#ver3=$(grep 'ver-.*LINUX' ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml | sed 's/ //g'| sed 's/.*ver-//g' |sed 's/LIN.*//g');
-				ver1=1
-				ver2=0
-				if [ -e  ${tmp}/mkflag ];then
+				ver1=$(grep 'title:"Linux版本' ${rd}/res/synapse/config.json.generate.status | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\.0\"\,//g');
+				ver2=$(grep 'title:"Linux版本' ${rd}/res/synapse/config.json.generate.status | sed 's/ //g'| sed 's/.*版本*.\.//g' |sed 's/\"\,//g') ;
+				vern=$(grep 'title:"Linux版本' ${rd}/res/synapse/config.json.generate.status | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\"\,//g');
+				if [ -e  ${tmp}/upflag ];then
 					echo "pack ramdisk:不升级内核编译版本。"
 					else
 					let "ver2=${ver2}+1";
@@ -83,16 +69,15 @@ pack_ramdisk()
 					fi
 				fi
 				code=${ver1}"."${ver2}
-				echo ${ver1}"."${ver2} > version
-				#sed -i -e "1,11s/$ver3/$code/" ${rd}/ROOT-RAMDISK/res/customconfig/customconfig.xml;
-				#cd ${rd}
-				#if [ -e /usr/bin/git ];then
-						#git commit -am "自动提交GIT:升级ramdisk版本。";
-						#else
-						#echo "pack ramdisk:请安装GIT。"
-				#fi
-				#cd ${main}
-				fm=LG-${cfg}-kernel-ver-${code}-$da-${relase}.zip
+				sed -i -e "1,11s/$vern/$code/" ${rd}/res/synapse/config.json.generate.status;
+				cd ${rd}
+				if [ -e /usr/bin/git ];then
+						#git commit -am "auto commit :update kernel version";
+						else
+						echo "pack ramdisk:please install GIT。"
+				fi
+				cd ${main}
+				fm=LG-${cfg}-kernel-ver-${code}-${da}-${relase}.zip
 				cp -a ${rd}/* ${rdt}
 				#cp -a ${rd}/${cfg}-RAMDISK/* ${rdt}
 				if [ -e  ${boot}/img/ramdisk.gz ];then
@@ -147,7 +132,7 @@ pack_ramdisk()
 				echo "文件路径:${out}"
 				echo "================================================"
 				echo "================================================"
-				else
+			else
 				echo "pack ramdisk:打包失败，请查看dt.img zimage是否生成。"
 			fi
 		fi
@@ -238,16 +223,16 @@ mk_flag()
 	echo "Maintask:输入‘y’升级编译版本。"
 	read ju1
 	if [ "${ju1}" = "y" ] || [ "${ju1}" = "Y" ];then
-		if [ -e ${tmp}/mkflag ];then
-			 rm ${tmp}/mkflag;
+		if [ -e ${tmp}/upflag ];then
+			 rm ${tmp}/upflag;
 		fi
 		else
-		touch ${tmp}/mkflag;
+		touch ${tmp}/upflag;
 	fi
 }
 # now let`s start
 faile=0
-printf "\ec"
+cl
 echo "Maintask:输入defconfig信息。"
 num=f460
 echo "Maintask:输入'Y'仅重新打包ramdisk，任意键重新编译内核。"
