@@ -72,7 +72,7 @@ pack_ramdisk()
 				sed -i -e "1,11s/$vern/$code/" ${rd}/res/synapse/config.json.generate.status;
 				cd ${rd}
 				if [ -e /usr/bin/git ];then
-						git commit -am "auto commit :update kernel version";
+						git commit -am "auto commit :update kernel version ${code}";
 						else
 						echo "pack ramdisk:please install GIT。"
 				fi
