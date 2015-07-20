@@ -56,8 +56,8 @@ pack_ramdisk()
 			if  [ -e ${ker}/arch/arm/boot/zImage ] && [ -e ${boot}/img/dt.img ] ;then
 				echo "pack ramdisk:内核已经准备好，准备打包ramdisk。"
 				# 自动设置文件名
-				ver1=$(grep 'title:"Linux版本' ${rd}/res/synapse/config.json.generate.status | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\.0\"\,//g');
-				ver2=$(grep 'title:"Linux版本' ${rd}/res/synapse/config.json.generate.status | sed 's/ //g'| sed 's/.*版本*.\.//g' |sed 's/\"\,//g') ;
+				ver1=$(grep 'title:"Linux版本' ${rd}/res/synapse/config.json.generate.status | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\..*\"\,//g');
+				ver2=$(grep 'title:"Linux版本' ${rd}/res/synapse/config.json.generate.status | sed 's/ //g'| sed 's/.*版本.*\.//g' |sed 's/\"\,//g') ;
 				vern=$(grep 'title:"Linux版本' ${rd}/res/synapse/config.json.generate.status | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\"\,//g');
 				if [ -e  ${tmp}/upflag ];then
 					echo "pack ramdisk:不升级内核编译版本。"
@@ -73,6 +73,7 @@ pack_ramdisk()
 				cd ${rd}
 				if [ -e /usr/bin/git ];then
 						#git commit -am "auto commit :update kernel version";
+						echo 1;
 						else
 						echo "pack ramdisk:please install GIT。"
 				fi
@@ -143,38 +144,33 @@ make_kernel()
 {
 			# 我这里使用型号识别defconfig，如果编译其他内核，还需要把整个cfg变量都设置为config文件名。
 			config=${ker}/arch/arm/configs/JZ_${cfg}_defconfig
-				if [ -e ${ker}/arch/arm/boot/zImage  ]  ||  [ -e ${boot}/img/dt.img ]  ||  [ -e ${boot}/img/zImage ]  ||  [ -e ${kw}/boot.img ];then
-
-					if [ -e ${boot}/img/dt.img ];then
-						echo "make kernel:删除DT.img。"
-						rm $boot/img/dt.img
-					fi
-
-					if [ -e ${boot}/img/zImage ];then
-						echo "make kernel:删除zImage。"
-						rm ${boot}/img/zImage
-					fi
-
-					if [ -e ${kw}/boot.img ];then
-						echo "make kernel:删除boot.img。"
-						rm ${kw}/boot.img
-					fi
-
-					if [ -e ${ker}/arch/arm/boot/zImage ];then
-						echo "make kernel:删除编译文件。"
-						rm ${ker}/arch/arm/boot/zImage
-					fi
-
-					echo "make kernel:清除完毕。"
-					else
-					echo "make kernel:编译目录是干净的。"
-				fi
 				echo "make kernel:准备编译内核。"
 				cd ${ker}
 				echo "make kernel:执行make  clean？"
 				read cl
 				if [ "${cl}" = "Y " ] || [ "${cl}" = "y" ];then
 						# ccache -c
+					if [ -e ${ker}/arch/arm/boot/zImage  ]  ||  [ -e ${boot}/img/dt.img ]  ||  [ -e ${boot}/img/zImage ]  ||  [ -e ${kw}/boot.img ];then
+							if [ -e ${boot}/img/dt.img ];then
+								echo "make kernel:删除DT.img。"
+								rm $boot/img/dt.img
+							fi
+							if [ -e ${boot}/img/zImage ];then
+								echo "make kernel:删除zImage。"
+								rm ${boot}/img/zImage
+							fi
+							if [ -e ${kw}/boot.img ];then
+								echo "make kernel:删除boot.img。"
+								rm ${kw}/boot.img
+							fi
+							if [ -e ${ker}/arch/arm/boot/zImage ];then
+								echo "make kernel:删除编译文件。"
+								rm ${ker}/arch/arm/boot/zImage
+							fi
+							echo "make kernel:清除完毕。"
+							else
+							echo "make kernel:编译目录是干净的。"
+						fi
 						make clean && make mrproper
 						for i in `find . -type f \( -iname \*.rej \
                                 -o -iname \*.orig \
