@@ -19,32 +19,32 @@ main=~/lg/f460
 #工具目录
 tool=${main}/build
 # 内核目录
-ker=${main}/f460
+kernel_folder=${main}/f460
 # boot暂存目录
 boot=${main}/boot
 # zip输出目录
 out=${main}/zipout
 # zip打包的文件目录
-kw=${main}/kernel-working
+kernel_working=${main}/kernel-working
 # ramdisk目录
-rd=${main}/f460r
+ramdisk_folder=${main}/f460r
 # ramdisk临时目录
-rdt=${boot}/temp/rd-temp
+ramdisk_temp=${boot}/temp/rd-temp
 # 临时目录
 tmp=${boot}/temp
-da=`date +%y_%m_%d`
-thr=`grep processor /proc/cpuinfo -c`
+date_today=`date +%y_%m_%d`
+cpu_thread=`grep processor /proc/cpuinfo -c`
 # 设置交叉编译工具目录变量
 export CROSS_COMPILE=android-toolchain/bin/arm-eabi-
 # 设置变量arm构架
 export ARCH=arm
 #############################设置内核打包参数################################
 base=0x00000000
-ka=0x00008000
-offset=0x02000000
-ta=0x00000100
-pg=4096
-cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 dwc3_msm.cpu_to_affin=1 androidboot.hardware=tiger6 androidboot.selinux=permissive"
+kernel_addr=0x00008000
+ramdisk_addr=0x02000000
+target_addr=0x00000100
+page_size=4096
+cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 dwc3_msm.cpu_to_affin=1 androidboot.hardware=tiger6 androidboot.selinux=permissive lpm_levels.sleep_disabled=1"
 #############################################################################
 
 # 打包ramdisk函数
@@ -53,12 +53,12 @@ pack_ramdisk()
 	if  [ ${faile} = 1 ]; then
 		echo "pack ramdisk:内核编译失败"
 	else
-			if  [ -e ${ker}/arch/arm/boot/zImage ] && [ -e ${boot}/img/dt.img ] ;then
+			if  [ -e ${kernel_folder}/arch/arm/boot/zImage ] && [ -e ${boot}/img/dt.img ] ;then
 				echo "pack ramdisk:内核已经准备好，准备打包ramdisk。"
 				# 自动设置文件名
-				ver1=$(grep 'title:"Linux版本' ${rd}/res/synapse/config.json.generate.status | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\..*\"\,//g');
-				ver2=$(grep 'title:"Linux版本' ${rd}/res/synapse/config.json.generate.status | sed 's/ //g'| sed 's/.*版本.*\.//g' |sed 's/\"\,//g') ;
-				vern=$(grep 'title:"Linux版本' ${rd}/res/synapse/config.json.generate.status | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\"\,//g');
+				ver1=$(grep 'title:"Linux版本' ${ramdisk_folder}/res/synapse/config.json.generate.mode | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\..*\"\,//g');
+				ver2=$(grep 'title:"Linux版本' ${ramdisk_folder}/res/synapse/config.json.generate.mode | sed 's/ //g'| sed 's/.*版本.*\.//g' |sed 's/\"\,//g') ;
+				vern=$(grep 'title:"Linux版本' ${ramdisk_folder}/res/synapse/config.json.generate.mode | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\"\,//g');
 				if [ -e  ${tmp}/upflag ];then
 					echo "pack ramdisk:不升级内核编译版本。"
 					else
@@ -69,60 +69,68 @@ pack_ramdisk()
 					fi
 				fi
 				code=${ver1}"."${ver2}
-				sed -i -e "1,11s/$vern/$code/" ${rd}/res/synapse/config.json.generate.status;
-				cd ${rd}
-				if [ -e /usr/bin/git ];then
-						git commit -am "auto commit :update kernel version ${code}";
-						else
-						echo "pack ramdisk:please install GIT。"
+				sed -i -e "1,11s/$vern/$code/" ${ramdisk_folder}/res/synapse/config.json.generate.mode;
+				if [ ! -e ${ramdisk_folder}/cur_ver ];then
+					touch ${ramdisk_folder}/cur_ver;
+				fi
+				echo "${ver1}${ver2}`date +%Y%m%d`" > ${ramdisk_folder}/cur_ver;
+				cd ${ramdisk_folder}
+				if [ ! -e  ${tmp}/upflag ];then
+					if [ -e /usr/bin/git ];then
+							git commit -am "auto commit :update kernel version ${code}";
+							else
+							echo "pack ramdisk:please install GIT。"
+					fi
 				fi
 				cd ${main}
-				fm=LG-${cfg}-kernel-ver-${code}-${da}-${relase}.zip
-				cp -a ${rd}/* ${rdt}
-				#cp -a ${rd}/${cfg}-RAMDISK/* ${rdt}
-				if [ -e  ${boot}/img/ramdisk.gz ];then
-					rm ${boot}/img/ramdisk.gz
+				fm=LG-${cfg}-JZ-kernel-ver-${code}-${date_today}-${relase}.zip;
+				cp -a ${ramdisk_folder}/* ${ramdisk_temp};
+				#cp -a ${ramdisk_folder}/${cfg}-RAMDISK/* ${ramdisk_temp}
+				if [ -e  ${boot}/img/ramdisk.lz4 ];then
+					rm ${boot}/img/ramdisk.lz4;
 				fi
-				chmod  +x ${boot}/tool/mkbootfs
-				${boot}/tool/mkbootfs ${rdt} | gzip > ramdisk.gz 2>/dev/null
-				mv ramdisk.gz $boot/img
-				if [ "$(ls ${rdt} | wc -l )"  != "0" ] ;then
-					rm -r ${rdt}/*
+				chmod  +x ${boot}/tool/mkbootfs;
+				${boot}/tool/mkbootfs ${ramdisk_temp} > ramdisk_temp
+				${kernel_folder}/tools/lz4demo/lz4demo -c1 ramdisk_temp ramdisk.lz4;
+				rm ramdisk;
+				mv ramdisk.lz4 $boot/img
+				if [ "$(ls ${ramdisk_temp} | wc -l )"  != "0" ] ;then
+					rm -r ${ramdisk_temp}/*
 					echo "pack ramdisk:清空临时ramdisk目录。"
 				fi
-				cp ${ker}/arch/arm/boot/zImage $boot/img/zImage
+				cp ${kernel_folder}/arch/arm/boot/zImage $boot/img/zImage
 				chmod +x ${boot}/tool/mkbootimg
-				${boot}/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.gz --cmdline "${cmdline}"  --base ${base} --kernel_offset ${ka} --ramdisk_offset ${offset} --tags_offset ${ta} --pagesize ${pg} --dt ${boot}/img/dt.img -o ${boot}/boot.img
+				${boot}/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.lz4  --cmdline "${cmdline}"  --base ${base} --kernel_offset ${kernel_addr} --ramdisk_offset ${ramdisk_addr} --tags_offset ${target_addr} --pagesize ${page_size} --dt ${boot}/img/dt.img -o ${boot}/boot.img
 				echo "pack ramdisk:list dt.img & boot.img"
 				ls $boot/img/dt.img
 				ls $boot/boot.img
-				mv $boot/boot.img $kw/boot.img
+				mv $boot/boot.img $kernel_working/boot.img
 				echo "pack ramdisk:BUMP内核！"
 				kernel_bump
-				r2=`ls ${kw}/system/lib/modules/ | wc -l`
+				r2=`ls ${kernel_working}/system/lib/modules/ | wc -l`
 				if [ "${r2}"  != "0" ] ;then
 					echo "pack ramdisk:清空内核模块目录。"
-					rm $kw/system/lib/modules/*
+					rm $kernel_working/system/lib/modules/*
 				fi
 				echo "pack ramdisk:拷贝模块。"
-				find ${ker} -name \*.ko -exec cp -f {} $kw/system/lib/modules/ \;
-				countfo=`ls ${kw}/system/lib/modules/ | wc -l`
-				# cp -a ${main}/mhi.ko ${kw}/system/lib/modules/;
+				find ${kernel_folder} -name \*.ko -exec cp -f {} $kernel_working/system/lib/modules/ \;
+				countfo=`ls ${kernel_working}/system/lib/modules/ | wc -l`
+				# cp -a ${main}/mhi.ko ${kernel_working}/system/lib/modules/;
 				# I build it form LG,so we dont need fs/exfat
-				cp -a ${main}/texfat.ko ${kw}/system/lib/modules/;
+				cp -a ${main}/texfat.ko ${kernel_working}/system/lib/modules/;
 				# strip not needed debugs from modules.
-				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-unneeded ${kw}/system/lib/modules/* 2>/dev/null
-				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-debug ${kw}/system/lib/modules/* 2>/dev/null
-				cd $kw
+				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-unneeded ${kernel_working}/system/lib/modules/* 2>/dev/null
+				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-debug ${kernel_working}/system/lib/modules/* 2>/dev/null
+				cd $kernel_working
 				zip -r temp.zip *
 				cd ..
-				mv $kw/temp.zip ${out}/${fm}
+				mv $kernel_working/temp.zip ${out}/${fm}
 				if [ ${relase} == "rrd" ];then
 					Cmode="only repack ramdisk and zip pack"
 				else
 					Cmode="make kernel and zip pack"
 				fi
-				countf=`ls ${kw}/system/lib/modules/ | wc -l`
+				countf=`ls ${kernel_working}/system/lib/modules/ | wc -l`
 				echo "================================================"
 				echo "================================================"
 				echo "编译模式:${Cmode}"
@@ -142,34 +150,30 @@ pack_ramdisk()
 make_kernel()
 {
 			# 我这里使用型号识别defconfig，如果编译其他内核，还需要把整个cfg变量都设置为config文件名。
-			config=${ker}/arch/arm/configs/JZ_${cfg}_defconfig
+			config=${kernel_folder}/arch/arm/configs/JZ_${cfg}_defconfig
 				echo "make kernel:准备编译内核。"
-				cd ${ker}
+				cd ${kernel_folder}
 				echo "make kernel:执行make  clean？"
 				read cl
 				if [ "${cl}" = "Y " ] || [ "${cl}" = "y" ];then
 						# ccache -c
-					if [ -e ${ker}/arch/arm/boot/zImage  ]  ||  [ -e ${boot}/img/dt.img ]  ||  [ -e ${boot}/img/zImage ]  ||  [ -e ${kw}/boot.img ];then
-							if [ -e ${boot}/img/dt.img ];then
-								echo "make kernel:删除DT.img。"
-								rm $boot/img/dt.img
-							fi
-							if [ -e ${boot}/img/zImage ];then
-								echo "make kernel:删除zImage。"
-								rm ${boot}/img/zImage
-							fi
-							if [ -e ${kw}/boot.img ];then
-								echo "make kernel:删除boot.img。"
-								rm ${kw}/boot.img
-							fi
-							if [ -e ${ker}/arch/arm/boot/zImage ];then
-								echo "make kernel:删除编译文件。"
-								rm ${ker}/arch/arm/boot/zImage
-							fi
-							echo "make kernel:清除完毕。"
-							else
-							echo "make kernel:编译目录是干净的。"
+						if [ -e ${boot}/img/dt.img ];then
+							echo "make kernel:删除DT.img。"
+							rm $boot/img/dt.img
 						fi
+						if [ -e ${boot}/img/zImage ];then
+							echo "make kernel:删除zImage。"
+							rm ${boot}/img/zImage
+						fi
+						if [ -e ${kernel_working}/boot.img ];then
+							echo "make kernel:删除boot.img。"
+							rm ${kernel_working}/boot.img
+						fi
+						if [ -e ${kernel_folder}/arch/arm/boot/zImage ];then
+							echo "make kernel:删除编译文件。"
+							rm ${kernel_folder}/arch/arm/boot/zImage
+						fi
+						echo "make kernel:清除完毕。"
 						make clean && make mrproper
 						for i in `find . -type f \( -iname \*.rej \
                                 -o -iname \*.orig \
@@ -183,15 +187,15 @@ make_kernel()
 								rm -vf $i;
 						done;
 						# cp ${config} .config;
-						make -j${thr} JZ_${cfg}_defconfig
+						make -j${cpu_thread} JZ_${cfg}_defconfig
 				fi
 				echo "$config"
 
-				time make -j${thr}
+				time make -j${cpu_thread}
 				cd ..
-				chmod +x ${ker}/scripts/dtbTool
-				if [ -e ${ker}/arch/arm/boot/zImage ];then
-				${ker}/scripts/dtbTool -s 2048 -o $boot/img/dt.img $ker/arch/arm/boot/dts/
+				chmod +x ${kernel_folder}/scripts/dtbTool
+				if [ -e ${kernel_folder}/arch/arm/boot/zImage ];then
+				${kernel_folder}/scripts/dtbTool -s 2048 -o $boot/img/dt.img ${kernel_folder}/arch/arm/boot/dts/
 				echo "make kernel:编译完毕。"
 				else
 				faile=1
@@ -202,11 +206,11 @@ make_kernel()
 kernel_bump()
 {
 	PYTHON_CHECK=$(ls -la /usr/bin/python2 | wc -l);
-	BOOT_IMAGE_LOCATION=${kw}/boot.img;
+	BOOT_IMAGE_LOCATION=${kernel_working}/boot.img;
 	if [ "$PYTHON_CHECK" -eq "1" ]; then
 		/usr/bin/python2 ${tool}/open_bump.py ${BOOT_IMAGE_LOCATION} ;
-		rm ${kw}/boot.img
-		mv ${kw}/boot_bumped.img ${kw}/boot.img
+		rm ${kernel_working}/boot.img
+		mv ${kernel_working}/boot_bumped.img ${kernel_working}/boot.img
 	else
 		echo "you dont have PYTHON2.x script will not work!!!";
 fi;
