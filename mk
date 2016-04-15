@@ -35,7 +35,7 @@ tmp=${boot}/temp
 date_today=`date +%y_%m_%d`
 cpu_thread=`grep processor /proc/cpuinfo -c`
 # 设置交叉编译工具目录变量
-export CROSS_COMPILE=android-toolchain/bin/arm-eabi-
+export CROSS_COMPILE=${main}/android-toolchain/bin/arm-eabi-
 # 设置变量arm构架
 export ARCH=arm
 #############################设置内核打包参数################################
@@ -44,7 +44,7 @@ kernel_addr=0x00008000
 ramdisk_addr=0x02000000
 target_addr=0x00000100
 page_size=4096
-cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 dwc3_msm.cpu_to_affin=1 androidboot.hardware=tiger6 androidboot.selinux=permissive lpm_levels.sleep_disabled=1"
+cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 dwc3_msm.cpu_to_affin=1 androidboot.hardware=tiger6 androidboot.selinux=disabled lpm_levels.sleep_disabled=1"
 #############################################################################
 
 # 打包ramdisk函数
@@ -82,8 +82,10 @@ pack_ramdisk()
 							echo "pack ramdisk:please install GIT。"
 					fi
 				fi
+				cd ${ramdisk_folder}
+				package_version=`git branch --list | grep "* " | sed 's/* //'`
 				cd ${main}
-				fm=LG-${cfg}-JZ-kernel-ver-${code}-${date_today}-${relase}.zip;
+				fm=LG-${cfg}-${package_version}-JZ-kernel-ver-${code}-${date_today}-${relase}.zip;
 				cp -a ${ramdisk_folder}/* ${ramdisk_temp};
 				#cp -a ${ramdisk_folder}/${cfg}-RAMDISK/* ${ramdisk_temp}
 				if [ -e  ${boot}/img/ramdisk.lz4 ];then
@@ -92,7 +94,6 @@ pack_ramdisk()
 				chmod  +x ${boot}/tool/mkbootfs;
 				${boot}/tool/mkbootfs ${ramdisk_temp} > ramdisk_temp
 				${kernel_folder}/tools/lz4demo/lz4demo -c1 ramdisk_temp ramdisk.lz4;
-				rm ramdisk;
 				mv ramdisk.lz4 $boot/img
 				if [ "$(ls ${ramdisk_temp} | wc -l )"  != "0" ] ;then
 					rm -r ${ramdisk_temp}/*
