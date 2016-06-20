@@ -44,7 +44,7 @@ kernel_addr=0x00008000
 ramdisk_addr=0x02000000
 target_addr=0x00000100
 page_size=4096
-cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 dwc3_msm.cpu_to_affin=1 androidboot.hardware=tiger6 androidboot.selinux=disabled lpm_levels.sleep_disabled=1"
+cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 dwc3_msm.cpu_to_affin=1 androidboot.hardware=tiger6 androidboot.selinux=permissive lpm_levels.sleep_disabled=1"
 #############################################################################
 
 # 打包ramdisk函数
@@ -53,12 +53,16 @@ pack_ramdisk()
 	if  [ ${faile} = 1 ]; then
 		echo "pack ramdisk:内核编译失败"
 	else
-			if  [ -e ${kernel_folder}/arch/arm/boot/zImage ] && [ -e ${boot}/img/dt.img ] ;then
+			if  [ -e ${kernel_folder}/arch/arm/boot/zImage ] && [ -e ${kernel_working}/image/dt.img ] ;then
+				cp ${kernel_folder}/arch/arm/boot/zImage ${kernel_working}/image/zImage
+				cd ${kernel_working}/image;
+				md5sum zImage > ${kernel_working}/image/zImage.md5;
+				md5sum dt.img > ${kernel_working}/image/dt.img.md5;
+				cd ${main};
 				echo "pack ramdisk:内核已经准备好，准备打包ramdisk。"
 				# 自动设置文件名
-				ver1=$(grep 'title:"Linux版本' ${ramdisk_folder}/res/synapse/config.json.generate.mode | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\..*\"\,//g');
-				ver2=$(grep 'title:"Linux版本' ${ramdisk_folder}/res/synapse/config.json.generate.mode | sed 's/ //g'| sed 's/.*版本.*\.//g' |sed 's/\"\,//g') ;
-				vern=$(grep 'title:"Linux版本' ${ramdisk_folder}/res/synapse/config.json.generate.mode | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\"\,//g');
+				ver1=$(expr substr $(cat ${ramdisk_folder}/cur_ver) 1 1);
+				ver2=$(expr substr $(cat ${ramdisk_folder}/cur_ver) 2 1);
 				if [ -e  ${tmp}/upflag ];then
 					echo "pack ramdisk:不升级内核编译版本。"
 					else
@@ -69,7 +73,6 @@ pack_ramdisk()
 					fi
 				fi
 				code=${ver1}"."${ver2}
-				sed -i -e "1,11s/$vern/$code/" ${ramdisk_folder}/res/synapse/config.json.generate.mode;
 				if [ ! -e ${ramdisk_folder}/cur_ver ];then
 					touch ${ramdisk_folder}/cur_ver;
 				fi
@@ -88,26 +91,16 @@ pack_ramdisk()
 				fm=LG-${cfg}-${package_version}-JZ-kernel-ver-${code}-${date_today}-${relase}.zip;
 				cp -a ${ramdisk_folder}/* ${ramdisk_temp};
 				#cp -a ${ramdisk_folder}/${cfg}-RAMDISK/* ${ramdisk_temp}
-				if [ -e  ${boot}/img/ramdisk.lz4 ];then
-					rm ${boot}/img/ramdisk.lz4;
+				if [ -d ${ramdisk_temp}/.git ]; then
+					rm -rf ${ramdisk_temp}/.git;
 				fi
-				chmod  +x ${boot}/tool/mkbootfs;
-				${boot}/tool/mkbootfs ${ramdisk_temp} > ramdisk_temp
-				${kernel_folder}/tools/lz4demo/lz4demo -c1 ramdisk_temp ramdisk.lz4;
-				mv ramdisk.lz4 $boot/img
+				cd ${ramdisk_temp}
+				tar -zcvpf ${kernel_working}/rd/ramdisk.gz ./;
 				if [ "$(ls ${ramdisk_temp} | wc -l )"  != "0" ] ;then
 					rm -r ${ramdisk_temp}/*
 					echo "pack ramdisk:清空临时ramdisk目录。"
 				fi
-				cp ${kernel_folder}/arch/arm/boot/zImage $boot/img/zImage
-				chmod +x ${boot}/tool/mkbootimg
-				${boot}/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.lz4  --cmdline "${cmdline}"  --base ${base} --kernel_offset ${kernel_addr} --ramdisk_offset ${ramdisk_addr} --tags_offset ${target_addr} --pagesize ${page_size} --dt ${boot}/img/dt.img -o ${boot}/boot.img
-				echo "pack ramdisk:list dt.img & boot.img"
-				ls $boot/img/dt.img
-				ls $boot/boot.img
-				mv $boot/boot.img $kernel_working/boot.img
-				echo "pack ramdisk:BUMP内核！"
-				kernel_bump
+				cd ${ramdisk_folder}
 				r2=`ls ${kernel_working}/system/lib/modules/ | wc -l`
 				if [ "${r2}"  != "0" ] ;then
 					echo "pack ramdisk:清空内核模块目录。"
@@ -116,10 +109,6 @@ pack_ramdisk()
 				echo "pack ramdisk:拷贝模块。"
 				find ${kernel_folder} -name \*.ko -exec cp -f {} $kernel_working/system/lib/modules/ \;
 				countfo=`ls ${kernel_working}/system/lib/modules/ | wc -l`
-				# cp -a ${main}/mhi.ko ${kernel_working}/system/lib/modules/;
-				# I build it form LG,so we dont need fs/exfat
-				cp -a ${main}/texfat.ko ${kernel_working}/system/lib/modules/;
-				# strip not needed debugs from modules.
 				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-unneeded ${kernel_working}/system/lib/modules/* 2>/dev/null
 				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-debug ${kernel_working}/system/lib/modules/* 2>/dev/null
 				cd $kernel_working
@@ -158,7 +147,7 @@ make_kernel()
 				read cl
 				if [ "${cl}" = "Y " ] || [ "${cl}" = "y" ];then
 						# ccache -c
-						if [ -e ${boot}/img/dt.img ];then
+						if [ -e ${kernel_working}/image/dt.img ];then
 							echo "make kernel:删除DT.img。"
 							rm $boot/img/dt.img
 						fi
@@ -196,7 +185,7 @@ make_kernel()
 				cd ..
 				chmod +x ${kernel_folder}/scripts/dtbTool
 				if [ -e ${kernel_folder}/arch/arm/boot/zImage ];then
-				${kernel_folder}/scripts/dtbTool -s 2048 -o $boot/img/dt.img ${kernel_folder}/arch/arm/boot/dts/
+				${kernel_folder}/scripts/dtbTool -s 2048 -o ${kernel_working}/image/dt.img ${kernel_folder}/arch/arm/boot/dts/
 				echo "make kernel:编译完毕。"
 				else
 				faile=1
