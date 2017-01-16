@@ -15,11 +15,11 @@
 
 ###################################################################################################################
 # 主目录
-main=~/lg/f460
+main=~/lg/h850
 #工具目录
 tool=${main}/build
 # 内核目录
-kernel_folder=${main}/f460
+kernel_folder=${main}/h850
 # boot暂存目录
 boot=${main}/boot
 # zip输出目录
@@ -27,7 +27,7 @@ out=${main}/zipout
 # zip打包的文件目录
 kernel_working=${main}/kernel-working
 # ramdisk目录
-ramdisk_folder=${main}/f460r
+ramdisk_folder=${main}/h850r
 # ramdisk临时目录
 ramdisk_temp=${boot}/temp/rd-temp
 # 临时目录
@@ -35,16 +35,17 @@ tmp=${boot}/temp
 date_today=`date +%y_%m_%d`
 cpu_thread=`grep processor /proc/cpuinfo -c`
 # 设置交叉编译工具目录变量
-export CROSS_COMPILE=${main}/android-toolchain/bin/arm-eabi-
+export CROSS_COMPILE=${main}/aarch64-linux-gnu/bin/aarch64-linux-gnu-
+#export CROSS_COMPILE=${main}/UBTC/bin/aarch64-linux-android-
 # 设置变量arm构架
-export ARCH=arm
+export ARCH=arm64
 #############################设置内核打包参数################################
-base=0x00000000
-kernel_addr=0x00008000
-ramdisk_addr=0x02000000
-target_addr=0x00000100
+base=0x80000000
+kernel_addr=0x80008000
+ramdisk_addr=0x81000000
+target_addr=0x80000100
 page_size=4096
-cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 dwc3_msm.cpu_to_affin=1 androidboot.hardware=tiger6 androidboot.selinux=disabled lpm_levels.sleep_disabled=1"
+cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 ehci-hcd.park=3 lpm_levels.sleep_disabled=1 cma=32M@0-0xffffffff androidboot.hardware=h1 dhash_entries=131072 ihash_entries=131072 androidboot.selinux=permissive"
 #############################################################################
 
 # 打包ramdisk函数
@@ -53,12 +54,11 @@ pack_ramdisk()
 	if  [ ${faile} = 1 ]; then
 		echo "pack ramdisk:内核编译失败"
 	else
-			if  [ -e ${kernel_folder}/arch/arm/boot/zImage ] && [ -e ${boot}/img/dt.img ] ;then
+			if  [ -e ${kernel_folder}/arch/arm64/boot/Image.gz-dtb ];then
 				echo "pack ramdisk:内核已经准备好，准备打包ramdisk。"
 				# 自动设置文件名
-				ver1=$(grep 'title:"Linux版本' ${ramdisk_folder}/res/synapse/config.json.generate.mode | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\..*\"\,//g');
-				ver2=$(grep 'title:"Linux版本' ${ramdisk_folder}/res/synapse/config.json.generate.mode | sed 's/ //g'| sed 's/.*版本.*\.//g' |sed 's/\"\,//g') ;
-				vern=$(grep 'title:"Linux版本' ${ramdisk_folder}/res/synapse/config.json.generate.mode | sed 's/ //g'| sed 's/.*版本//g' |sed 's/\"\,//g');
+				ver1=$(expr substr `cat ${ramdisk_folder}/cur_ver` 1 1);
+				ver2=$(expr substr `cat ${ramdisk_folder}/cur_ver` 2 1) ;
 				if [ -e  ${tmp}/upflag ];then
 					echo "pack ramdisk:不升级内核编译版本。"
 					else
@@ -69,45 +69,33 @@ pack_ramdisk()
 					fi
 				fi
 				code=${ver1}"."${ver2}
-				sed -i -e "1,11s/$vern/$code/" ${ramdisk_folder}/res/synapse/config.json.generate.mode;
 				if [ ! -e ${ramdisk_folder}/cur_ver ];then
 					touch ${ramdisk_folder}/cur_ver;
 				fi
 				echo "${ver1}${ver2}`date +%Y%m%d`" > ${ramdisk_folder}/cur_ver;
 				cd ${ramdisk_folder}
-				if [ ! -e  ${tmp}/upflag ];then
-					if [ -e /usr/bin/git ];then
-							git commit -am "auto commit :update kernel version ${code}";
-							else
-							echo "pack ramdisk:please install GIT。"
-					fi
-				fi
-				cd ${ramdisk_folder}
 				package_version=`git branch --list | grep "* " | sed 's/* //'`
 				cd ${main}
 				fm=LG-${cfg}-${package_version}-JZ-kernel-ver-${code}-${date_today}-${relase}.zip;
-				cp -a ${ramdisk_folder}/* ${ramdisk_temp};
-				#cp -a ${ramdisk_folder}/${cfg}-RAMDISK/* ${ramdisk_temp}
-				if [ -e  ${boot}/img/ramdisk.lz4 ];then
-					rm ${boot}/img/ramdisk.lz4;
+				cp -a ${ramdisk_folder}/* ${ramdisk_temp}/;
+				if [ -d ${ramdisk_temp}/.git ];then
+					rm ${ramdisk_temp}/.git
+				fi
+				if [ -e  ${boot}/img/ramdisk.gz ];then
+					rm ${boot}/img/ramdisk.gz;
 				fi
 				chmod  +x ${boot}/tool/mkbootfs;
-				${boot}/tool/mkbootfs ${ramdisk_temp} > ramdisk_temp
-				${kernel_folder}/tools/lz4demo/lz4demo -c1 ramdisk_temp ramdisk.lz4;
-				mv ramdisk.lz4 $boot/img
+				${boot}/tool/mkbootfs ${ramdisk_temp} | gzip > ramdisk.gz 2>/dev/null
+				mv ramdisk.gz $boot/img
 				if [ "$(ls ${ramdisk_temp} | wc -l )"  != "0" ] ;then
 					rm -r ${ramdisk_temp}/*
 					echo "pack ramdisk:清空临时ramdisk目录。"
 				fi
-				cp ${kernel_folder}/arch/arm/boot/zImage $boot/img/zImage
 				chmod +x ${boot}/tool/mkbootimg
-				${boot}/tool/mkbootimg --kernel $boot/img/zImage --ramdisk $boot/img/ramdisk.lz4  --cmdline "${cmdline}"  --base ${base} --kernel_offset ${kernel_addr} --ramdisk_offset ${ramdisk_addr} --tags_offset ${target_addr} --pagesize ${page_size} --dt ${boot}/img/dt.img -o ${boot}/boot.img
+				${boot}/tool/mkbootimg --kernel $boot/img/Image.gz-dtb --ramdisk $boot/img/ramdisk.gz  --cmdline "${cmdline}"  --base ${base} --kernel_offset ${kernel_addr} --ramdisk_offset ${ramdisk_addr} --tags_offset ${target_addr} --pagesize ${page_size} -o ${boot}/boot.img
 				echo "pack ramdisk:list dt.img & boot.img"
-				ls $boot/img/dt.img
 				ls $boot/boot.img
 				mv $boot/boot.img $kernel_working/boot.img
-				echo "pack ramdisk:BUMP内核！"
-				kernel_bump
 				r2=`ls ${kernel_working}/system/lib/modules/ | wc -l`
 				if [ "${r2}"  != "0" ] ;then
 					echo "pack ramdisk:清空内核模块目录。"
@@ -116,7 +104,6 @@ pack_ramdisk()
 				echo "pack ramdisk:拷贝模块。"
 				find ${kernel_folder} -name \*.ko -exec cp -f {} $kernel_working/system/lib/modules/ \;
 				countfo=`ls ${kernel_working}/system/lib/modules/ | wc -l`
-				# cp -a ${main}/mhi.ko ${kernel_working}/system/lib/modules/;
 				# I build it form LG,so we dont need fs/exfat
 				cp -a ${main}/texfat.ko ${kernel_working}/system/lib/modules/;
 				# strip not needed debugs from modules.
@@ -151,28 +138,24 @@ pack_ramdisk()
 make_kernel()
 {
 			# 我这里使用型号识别defconfig，如果编译其他内核，还需要把整个cfg变量都设置为config文件名。
-			config=${kernel_folder}/arch/arm/configs/JZ_${cfg}_defconfig
+			config=${kernel_folder}/arch/arm64/configs/JZ_${cfg}_defconfig
 				echo "make kernel:准备编译内核。"
 				cd ${kernel_folder}
 				echo "make kernel:执行make  clean？"
 				read cl
 				if [ "${cl}" = "Y " ] || [ "${cl}" = "y" ];then
 						# ccache -c
-						if [ -e ${boot}/img/dt.img ];then
-							echo "make kernel:删除DT.img。"
-							rm $boot/img/dt.img
-						fi
-						if [ -e ${boot}/img/zImage ];then
+						if [ -e ${boot}/img/Image.gz-dtb ];then
 							echo "make kernel:删除zImage。"
-							rm ${boot}/img/zImage
+							rm ${boot}/img/Image.gz-dtb
 						fi
 						if [ -e ${kernel_working}/boot.img ];then
 							echo "make kernel:删除boot.img。"
 							rm ${kernel_working}/boot.img
 						fi
-						if [ -e ${kernel_folder}/arch/arm/boot/zImage ];then
+						if [ -e ${kernel_folder}/arch/arm64/boot/Image.gz-dtb ];then
 							echo "make kernel:删除编译文件。"
-							rm ${kernel_folder}/arch/arm/boot/zImage
+							rm ${kernel_folder}/arch/arm64/boot/Image.gz-dtb
 						fi
 						echo "make kernel:清除完毕。"
 						make clean && make mrproper
@@ -194,9 +177,8 @@ make_kernel()
 
 				time make -j${cpu_thread}
 				cd ..
-				chmod +x ${kernel_folder}/scripts/dtbTool
-				if [ -e ${kernel_folder}/arch/arm/boot/zImage ];then
-				${kernel_folder}/scripts/dtbTool -s 2048 -o $boot/img/dt.img ${kernel_folder}/arch/arm/boot/dts/
+				if [ -e ${kernel_folder}/arch/arm64/boot/Image.gz-dtb ];then
+				cp ${kernel_folder}/arch/arm64/boot/Image.gz-dtb $boot/img/Image.gz-dtb
 				echo "make kernel:编译完毕。"
 				else
 				faile=1
@@ -234,7 +216,7 @@ mk_flag()
 faile=0
 cl
 echo "Maintask:输入defconfig信息。"
-num=f460
+num=h850
 echo "Maintask:输入'Y'仅重新打包ramdisk，任意键重新编译内核。"
 read ju
 if [ "${ju}" = "y" ] || [ "${ju}" = "Y" ];then
