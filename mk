@@ -41,9 +41,9 @@ export CROSS_COMPILE=${main}/aarch64-linux-gnu/bin/aarch64-linux-gnu-
 export ARCH=arm64
 #############################设置内核打包参数################################
 base=0x80000000
-kernel_addr=0x80008000
-ramdisk_addr=0x81000000
-target_addr=0x80000100
+kernel_addr=0x00008000
+ramdisk_addr=0x02200000
+target_addr=0x00000100
 page_size=4096
 cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 ehci-hcd.park=3 lpm_levels.sleep_disabled=1 cma=32M@0-0xffffffff androidboot.hardware=h1 dhash_entries=131072 ihash_entries=131072 androidboot.selinux=permissive"
 #############################################################################
@@ -103,8 +103,10 @@ pack_ramdisk()
 				fi
 				echo "pack ramdisk:拷贝模块。"
 				find ${kernel_folder} -name \*.ko -exec cp -f {} $kernel_working/system/lib/modules/ \;
+				ls ${kernel_working}/system/lib/modules/
 				countfo=`ls ${kernel_working}/system/lib/modules/ | wc -l`
 				# I build it form LG,so we dont need fs/exfat
+				sleep 1
 				cp -a ${main}/texfat.ko ${kernel_working}/system/lib/modules/;
 				# strip not needed debugs from modules.
 				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-unneeded ${kernel_working}/system/lib/modules/* 2>/dev/null
@@ -175,7 +177,7 @@ make_kernel()
 				fi
 				echo "$config"
 
-				time make -j${cpu_thread}
+				time make -j${cpu_thread} ${1}
 				cd ..
 				if [ -e ${kernel_folder}/arch/arm64/boot/Image.gz-dtb ];then
 				cp ${kernel_folder}/arch/arm64/boot/Image.gz-dtb $boot/img/Image.gz-dtb
@@ -233,7 +235,7 @@ if [ "${ju}" = "y" ] || [ "${ju}" = "Y" ];then
 		mk_flag
 		for cfg in ${num} ; do
 			echo ${cfg}
-			make_kernel
+			make_kernel ${1}
 			pack_ramdisk
 		done
 fi
