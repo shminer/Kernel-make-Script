@@ -45,7 +45,7 @@ kernel_addr=0x00008000
 ramdisk_addr=0x02200000
 target_addr=0x00000100
 page_size=4096
-cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 ehci-hcd.park=3 lpm_levels.sleep_disabled=1 cma=32M@0-0xffffffff androidboot.hardware=h1 dhash_entries=131072 ihash_entries=131072 androidboot.selinux=permissive"
+cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 ehci-hcd.park=3 lpm_levels.sleep_disabled=1 cma=32M@0-0xffffffff androidboot.hardware=h1 dhash_entries=131072 ihash_entries=131072 androidboot.selinux=permissive zswap.enabled=1 zswap.compressor=lz4"
 #############################################################################
 
 # 打包ramdisk函数
