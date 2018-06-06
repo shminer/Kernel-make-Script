@@ -36,6 +36,7 @@ date_today=`date +%y_%m_%d`
 cpu_thread=`grep processor /proc/cpuinfo -c`
 # 设置交叉编译工具目录变量
 export CROSS_COMPILE=${main}/aarch64-linux-gnu/bin/aarch64-linux-gnu-
+#export CROSS_COMPILE=${main}/aarch64-linux-gnu/bin/aarch64-OP3T-linux-android-
 #export CROSS_COMPILE=${main}/UBTC/bin/aarch64-linux-android-
 # 设置变量arm构架
 export ARCH=arm64
@@ -106,11 +107,10 @@ pack_ramdisk()
 				ls ${kernel_working}/system/lib/modules/
 				countfo=`ls ${kernel_working}/system/lib/modules/ | wc -l`
 				# I build it form LG,so we dont need fs/exfat
-				sleep 1
-				cp -a ${main}/texfat.ko ${kernel_working}/system/lib/modules/;
+				#cp -a ${main}/texfat.ko ${kernel_working}/system/lib/modules/;
 				# strip not needed debugs from modules.
-				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-unneeded ${kernel_working}/system/lib/modules/* 2>/dev/null
-				android-toolchain/bin/arm-LG-linux-gnueabi-strip --strip-debug ${kernel_working}/system/lib/modules/* 2>/dev/null
+				${main}/aarch64-linux-gnu/bin/aarch64-linux-gnu-strip --strip-unneeded ${kernel_working}/system/lib/modules/* 2>/dev/null
+				${main}/aarch64-linux-gnu/bin/aarch64-linux-gnu-strip --strip-debug ${kernel_working}/system/lib/modules/* 2>/dev/null
 				cd $kernel_working
 				zip -r temp.zip *
 				cd ..
