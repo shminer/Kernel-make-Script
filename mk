@@ -35,7 +35,7 @@ tmp=${boot}/temp
 date_today=`date +%y_%m_%d`
 cpu_thread=`grep processor /proc/cpuinfo -c`
 # 设置交叉编译工具目录变量
-export CROSS_COMPILE=${main}/aarch64-linux-gnu/bin/aarch64-linux-gnu-
+export CROSS_COMPILE=${main}/aarch64-linux-gnu8/bin/aarch64-linux-gnu-
 #export CROSS_COMPILE=${main}/aarch64-linux-gnu/bin/aarch64-OP3T-linux-android-
 #export CROSS_COMPILE=${main}/UBTC/bin/aarch64-linux-android-
 # 设置变量arm构架
@@ -43,10 +43,10 @@ export ARCH=arm64
 #############################设置内核打包参数################################
 base=0x80000000
 kernel_addr=0x00008000
-ramdisk_addr=0x02200000
+ramdisk_addr=0x01000000
 target_addr=0x00000100
 page_size=4096
-cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 ehci-hcd.park=3 lpm_levels.sleep_disabled=1 cma=32M@0-0xffffffff androidboot.hardware=h1 dhash_entries=131072 ihash_entries=131072 androidboot.selinux=permissive zswap.enabled=1 zswap.compressor=lz4"
+cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 msm_rtb.filter=0x237 ehci-hcd.park=3 lpm_levels.sleep_disabled=1 cma=32M@0-0xffffffff androidboot.hardware=h1 buildvariant=user androidboot.selinux=permissive"
 #############################################################################
 
 # 打包ramdisk函数
