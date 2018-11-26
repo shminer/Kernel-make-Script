@@ -99,7 +99,7 @@ pack_ramdisk()
 				sudo find . | sudo cpio -R 0:0 -H newc -o 2>/dev/null | gzip > ${ramdisk_name}
 				mv ${ramdisk_name} $boot/img
 				if [ "$(ls ${ramdisk_temp} | wc -l )"  != "0" ] ;then
-					# sudo rm -r ${ramdisk_temp}/*
+					sudo rm -r ${ramdisk_temp}/*
 					echo "pack ramdisk:清空临时ramdisk目录。"
 				fi
 				chmod +x ${boot}/tool/mkbootimg
