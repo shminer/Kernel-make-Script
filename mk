@@ -14,6 +14,8 @@
 # 如果从我的git上fork，设置好目录后可以直接编译内核。
 
 ###################################################################################################################
+#defconfig=JZ_TEST_defconfig
+defconfig=JZ_h850_defconfig
 # 主目录
 main=~/lg/h850
 #工具目录
@@ -36,16 +38,21 @@ date_today=`date +%y_%m_%d`
 cpu_thread=`grep processor /proc/cpuinfo -c`
 # 设置交叉编译工具目录变量
 export CROSS_COMPILE=${main}/aarch64-linux-gnu8/bin/aarch64-linux-gnu-
-#export CROSS_COMPILE=${main}/aarch64-linux-gnu/bin/aarch64-OP3T-linux-android-
+# export CROSS_COMPILE=${main}/linux-x86_64/bin/aarch64-linux-android-
 #export CROSS_COMPILE=${main}/UBTC/bin/aarch64-linux-android-
 # 设置变量arm构架
 export ARCH=arm64
+
+ramdisk_name=ramdisk.cpio.gz
 #############################设置内核打包参数################################
 base=0x80000000
-kernel_addr=0x00008000
-ramdisk_addr=0x01000000
-target_addr=0x00000100
-page_size=4096
+kerneloff=0x00008000
+ramdiskoff=0x01000000
+tagsoff=0x00000100
+secondoff=00f00000
+pagesize=4096
+hash_type=sha1
+hdrver=0
 cmdline="console=ttyHSL0,115200,n8 androidboot.console=ttyHSL0 user_debug=31 msm_rtb.filter=0x237 ehci-hcd.park=3 lpm_levels.sleep_disabled=1 cma=32M@0-0xffffffff androidboot.hardware=h1 buildvariant=user androidboot.selinux=permissive"
 #############################################################################
 
@@ -78,22 +85,26 @@ pack_ramdisk()
 				package_version=`git branch --list | grep "* " | sed 's/* //'`
 				cd ${main}
 				fm=LG-${cfg}-${package_version}-JZ-kernel-ver-${code}-${date_today}-${relase}.zip;
-				cp -a ${ramdisk_folder}/* ${ramdisk_temp}/;
+				sudo cp -a ${ramdisk_folder}/* ${ramdisk_temp}/;
+				sudo cp -a ${ramdisk_folder}/. ${ramdisk_temp}/;
 				if [ -d ${ramdisk_temp}/.git ];then
-					rm ${ramdisk_temp}/.git
+					sudo rm -r ${ramdisk_temp}/.git*
 				fi
-				if [ -e  ${boot}/img/ramdisk.gz ];then
-					rm ${boot}/img/ramdisk.gz;
+				if [ -e  ${boot}/img/*.gz ];then
+					sudo rm ${boot}/img/*.gz;
 				fi
-				chmod  +x ${boot}/tool/mkbootfs;
-				${boot}/tool/mkbootfs ${ramdisk_temp} | gzip > ramdisk.gz 2>/dev/null
-				mv ramdisk.gz $boot/img
+				# chmod  +x ${boot}/tool/mkbootfs;
+				# ${boot}/tool/mkbootfs ${ramdisk_temp} | gzip > ramdisk.gz 2>/dev/null
+				cd ${ramdisk_temp}
+				sudo find . | sudo cpio -R 0:0 -H newc -o 2>/dev/null | gzip > ${ramdisk_name}
+				mv ${ramdisk_name} $boot/img
 				if [ "$(ls ${ramdisk_temp} | wc -l )"  != "0" ] ;then
-					rm -r ${ramdisk_temp}/*
+					# sudo rm -r ${ramdisk_temp}/*
 					echo "pack ramdisk:清空临时ramdisk目录。"
 				fi
 				chmod +x ${boot}/tool/mkbootimg
-				${boot}/tool/mkbootimg --kernel $boot/img/Image.gz-dtb --ramdisk $boot/img/ramdisk.gz  --cmdline "${cmdline}"  --base ${base} --kernel_offset ${kernel_addr} --ramdisk_offset ${ramdisk_addr} --tags_offset ${target_addr} --pagesize ${page_size} -o ${boot}/boot.img
+				# ${boot}/tool/mkbootimg --kernel $boot/img/Image.gz-dtb --ramdisk $boot/img/${ramdisk_name}  --cmdline "${cmdline}"  --base ${base} --kernel_offset ${kernel_addr} --ramdisk_offset ${ramdisk_addr} --tags_offset ${tags_offset} --pagesize ${page_size} --hash ${hash_type} -o ${boot}/boot.img
+				${boot}/tool/mkbootimg --kernel $boot/img/Image.gz-dtb --ramdisk $boot/img/${ramdisk_name}  --cmdline "$cmdline" --base $base --pagesize $pagesize --kernel_offset $kerneloff --ramdisk_offset $ramdiskoff --second_offset "$secondoff" --tags_offset "$tagsoff" --header_version "$hdrver" $hash -o ${boot}/boot.img
 				echo "pack ramdisk:list dt.img & boot.img"
 				ls $boot/boot.img
 				mv $boot/boot.img $kernel_working/boot.img
@@ -109,8 +120,8 @@ pack_ramdisk()
 				# I build it form LG,so we dont need fs/exfat
 				#cp -a ${main}/texfat.ko ${kernel_working}/system/lib/modules/;
 				# strip not needed debugs from modules.
-				${main}/aarch64-linux-gnu/bin/aarch64-linux-gnu-strip --strip-unneeded ${kernel_working}/system/lib/modules/* 2>/dev/null
-				${main}/aarch64-linux-gnu/bin/aarch64-linux-gnu-strip --strip-debug ${kernel_working}/system/lib/modules/* 2>/dev/null
+				#${main}/aarch64-linux-gnu/bin/aarch64-linux-gnu-strip --strip-unneeded ${kernel_working}/system/lib/modules/* 2>/dev/null
+				#${main}/aarch64-linux-gnu/bin/aarch64-linux-gnu-strip --strip-debug ${kernel_working}/system/lib/modules/* 2>/dev/null
 				cd $kernel_working
 				zip -r temp.zip *
 				cd ..
@@ -140,7 +151,7 @@ pack_ramdisk()
 make_kernel()
 {
 			# 我这里使用型号识别defconfig，如果编译其他内核，还需要把整个cfg变量都设置为config文件名。
-			config=${kernel_folder}/arch/arm64/configs/JZ_${cfg}_defconfig
+			config=${kernel_folder}/arch/arm64/configs/${defconfig}
 				echo "make kernel:准备编译内核。"
 				cd ${kernel_folder}
 				echo "make kernel:执行make  clean？"
@@ -173,7 +184,7 @@ make_kernel()
 								rm -vf $i;
 						done;
 						# cp ${config} .config;
-						make -j${cpu_thread} JZ_${cfg}_defconfig
+						make -j${cpu_thread} ${defconfig}
 				fi
 				echo "$config"
 
